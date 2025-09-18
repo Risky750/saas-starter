@@ -117,3 +117,28 @@ While this template is intentionally minimal and to be used as a learning resour
 - https://makerkit.dev
 - https://zerotoshipped.com
 - https://turbostarter.dev
+
+---
+
+Beginner quickstart (simplified)
+
+1. Copy example env and edit values:
+
+```powershell
+cp .env.example .env.local
+```
+
+2. Install and run:
+
+```powershell
+pnpm install
+pnpm dev
+```
+
+3. Open `http://localhost:3000`.
+
+If you use Monnify sandbox, set `MONNIFY_BASE_URL` to `https://sandbox.monnify.com` and provide sandbox keys.
+
+If you hit a Monnify 404 during `init-transaction`, verify `MONNIFY_CONTRACT_CODE` in your Monnify dashboard.
+
+---

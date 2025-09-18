@@ -4,7 +4,7 @@ import React from "react";
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, CreditCard, Database } from 'lucide-react';
+import { GlassesIcon, CreditCard, Globe, ArrowRight} from 'lucide-react';
 
 export default function HomePage() {
   const [showModal, setShowModal] = React.useState(true);
@@ -65,11 +65,12 @@ export default function HomePage() {
               {/* copy */}
               <div className="text-center lg:text-left">
                 <h1 className="text-4xl lg:text-6xl font-bold tracking-tight">
-                  Build Your Website
-                  <span className="block text-[#FF1E27]">Faster Than Ever</span>
+                  Show class with a stunning website.
+                  <br />
+                  
                 </h1>
                 <p className="mt-4 text-lg lg:text-xl text-[#7D141D]/80">
-                  Launch your website in record time—quality work at affordable prices.
+                  Let's build your website in record time, quality work at affordable prices.
                 </p>
                 <div className="mt-8">
                   <Button
@@ -99,24 +100,17 @@ export default function HomePage() {
         <section className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-3 gap-8">
             {[{
-              icon: <Database className="h-6 w-6" />,
-              title: 'Professional Website & Portfolios',
-              text: 'Leverage modern web technologies to create a stunning online presence.',
+              icon: <GlassesIcon className="h-6 w-6" />,
+              title: 'Professional Look',
+              text: 'Leverage modern web technologies to look professional.',
             }, {
               icon: <CreditCard className="h-6 w-6" />,
-              title: 'Email Hosting & Online Blogs',
-              text: 'Different services to choose from, depending on your needs.',
+              title: 'Online Presence',
+              text: 'Establish your brand with a professional online presence.',
             }, {
-              icon: (
-                <svg viewBox="0 0 24 24" className="h-6 w-6">
-                  <path
-                    fill="currentColor"
-                    d="M14.23 12.004a2.236 2.236 0 0 1-2.235 2.236…"
-                  />
-                </svg>
-              ),
-              title: 'Fast Delivery and Affordable Prices',
-              text: 'Get the best value for your money with our competitively priced services.',
+              icon: <Globe className="h-6 w-6" />,
+              title: 'Global Reach',
+              text: 'Expand your reach and connect with customers worldwide.',
             }].map((f) => (
               <div key={f.title} className="bg-white rounded-2xl p-6 shadow-md">
                 <div className="flex items-center justify-center h-12 w-12 rounded-full bg-[#FF1E27] text-white mb-4">
@@ -133,17 +127,17 @@ export default function HomePage() {
         <section className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h2 className="text-3xl lg:text-4xl font-bold">Ready to launch your website?</h2>
+              <h2 className="text-3xl lg:text-4xl font-bold">Have an idea?</h2>
               <p className="mt-2 text-[#7D141D]/80">
-                Start today and experience quality, speed and satisfaction.
+                Let'<span className="hidden md:inline">s</span> bring it to life with a custom design.
               </p>
             </div>
             <Button
               size="lg"
               className="rounded-full bg-[#FF1E27] text-white hover:bg-[#FF1E27]/90 transition"
-              onClick={() => router.push('/templates')}
+              onClick={() => router.push('/contact/customer-care')}
             >
-              Start a Project
+              Custom Design
               <ArrowRight className="ml-3 h-6 w-6" />
             </Button>
           </div>

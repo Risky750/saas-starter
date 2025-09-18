@@ -28,7 +28,7 @@ export default function PriceCards() {
       } catch (e) {
       }
       setTimeout(() => {
-        router.push(`/checkout?template=${encodeURIComponent(selectedId ?? '')}&plan=${encodeURIComponent(plan.id)}`);
+        router.push('/checkout');
       }, 700);
     };
 
