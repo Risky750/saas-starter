@@ -15,10 +15,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 lg:px-8 grid gap-10 lg:grid-cols-2 items-center">
           <div className="text-center lg:text-left">
             <h1 className="text-4xl lg:text-6xl font-bold leading-tight">
-              A website you’ll actually like
+              Visibility & Discovery
             </h1>
             <p className="mt-4 text-lg text-[#7D141D]/80">
-              Fast setup, fair price, and it doesn’t look cheap — finally.
+              Be found anywhere — Google, social media, and beyond.
             </p>
 
             <Button

@@ -139,7 +139,7 @@ export default function CheckoutClient() {
       <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* left – details */}
         <section className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
-          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6">
+          <h2 className="text-xl sm:text-2xl text-gray-900 mb-6">
             Fill your details before proceeding
           </h2>
           <Register />
