@@ -37,8 +37,8 @@ export default function CustomerCareClient() {
 
   return (
     <Card className="p-6 lg:p-8 rounded-2xl shadow-lg">
-      <h1 className="text-2xl font-bold mb-2">Customer Care</h1>
-      <p className="mb-6 text-[#7D141D]/80">Tell us about your custom design request and we'll respond shortly.</p>
+      <h1 className="text-2xl font-bold mb-2">Contact</h1>
+      <p className="mb-6 text-[#7D141D]/80">You will be contacted when we see your message</p>
 
       {sent ? (
         <p className="text-green-700">✓ Request sent. We’ll reply shortly.</p>
@@ -47,16 +47,23 @@ export default function CustomerCareClient() {
           <Input name="name" placeholder="Your name" required />
           <Input name="email" type="email" placeholder="Email address" required />
           <Input name="phone" placeholder="Phone (optional)" />
-          <Textarea name="message" placeholder="Describe your custom design needs" rows={6} required />
+          <Textarea name="message" placeholder="let us know your needs" rows={6} required />
           <input type="hidden" name="templateId" value={templateId} />
           <div className="flex gap-2">
             <Button type="submit" className="rounded-full bg-[#7D141D] text-white" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : 'Send request'}
+              {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : 'Send '}
             </Button>
-            <Button type="button" variant="ghost" onClick={() => router.back()}>Cancel</Button>
           </div>
         </form>
       )}
+
+      <Button
+        onClick={() => router.push("https://wa.me/2349012065117")}
+        variant="outline"
+        className="mt-2 flex flex-col bg-green-400 justify-center rounded-full hover:bg-green-50">
+        Contact us on WhatsApp
+      </Button>
+
     </Card>
   );
 }

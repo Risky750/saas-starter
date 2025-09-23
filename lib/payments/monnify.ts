@@ -1,18 +1,17 @@
+const BASE = process.env.MONNIFY_BASE_URL || 'https://sandbox.monnify.com';
 
-const BASE = process.env.MONNIFY_BASE_URL ?? 'https://sandbox.monnify.com';
-// accept multiple common env var names for backwards compatibility
-const API_KEY = process.env.MONNIFY_API_KEY ?? process.env.MONNIFY_KEY;
-const SECRET_KEY = process.env.MONNIFY_SECRET_KEY ?? process.env.MONNIFY_API_SECRET ?? process.env.MONNIFY_SECRET;
+const API_KEY = process.env.MONNIFY_API_KEY || process.env.MONNIFY_KEY;
+const SECRET_KEY = process.env.MONNIFY_SECRET_KEY || process.env.MONNIFY_API_SECRET || process.env.MONNIFY_SECRET;
 const CONTRACT_CODE = process.env.MONNIFY_CONTRACT_CODE;
 
 async function getAccessToken() {
   if (!API_KEY || !SECRET_KEY) {
-    throw new Error('Missing MONNIFY_API_KEY or MONNIFY_API_SECRET / MONNIFY_SECRET_KEY');
+    throw new Error('Missing Monnify keys');
   }
 
   const auth = Buffer.from(`${API_KEY}:${SECRET_KEY}`).toString('base64');
 
-  const res = await fetch(`${BASE}/api/v1/auth/login`, {
+  const resp = await fetch(`${BASE}/api/v1/auth/login`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${auth}`,
@@ -20,9 +19,10 @@ async function getAccessToken() {
     },
   });
 
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.responseMessage || json?.message || 'Monnify auth failed');
-  return json?.responseBody?.accessToken;
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data?.responseMessage || data?.message || 'Monnify auth failed');
+
+  return data?.responseBody?.accessToken;
 }
 
 export async function initializeTransaction({
@@ -44,78 +44,52 @@ export async function initializeTransaction({
   currency?: string;
   redirectUrl?: string;
 }) {
-  if (!CONTRACT_CODE) throw new Error('Missing MONNIFY_CONTRACT_CODE');
+  if (!CONTRACT_CODE) throw new Error('Missing Monnify contract code');
 
   const token = await getAccessToken();
-  // Basic validation to catch missing/invalid fields early and provide better errors
-  if (typeof amount !== 'number' || Number.isNaN(amount) || amount <= 0) {
-    throw new Error(`Invalid amount provided to Monnify initialize: ${String(amount)}`);
-  }
-  if (!customerName || String(customerName).trim().length === 0) {
-    throw new Error('Missing customerName for Monnify initialize');
-  }
-  if (!customerEmail || String(customerEmail).trim().length === 0) {
-    throw new Error('Missing customerEmail for Monnify initialize');
-  }
-  if (!paymentReference || String(paymentReference).trim().length === 0) {
-    throw new Error('Missing paymentReference for Monnify initialize');
-  }
+
+  if (!amount || isNaN(amount)) throw new Error('Bad amount');
+  if (!customerName) throw new Error('Missing name');
+  if (!customerEmail) throw new Error('Missing email');
+  if (!paymentReference) throw new Error('Missing reference');
+
   const body: Record<string, any> = {
     amount,
     customerName,
     customerEmail,
     paymentReference,
     contractCode: CONTRACT_CODE,
-    // Monnify expects `currencyCode` in their init API
     currencyCode: currency,
-    redirectUrl: redirectUrl ?? (process.env.BASE_URL ?? 'http://localhost:3000') + '/dashboard',
-    // include non-sensitive metadata if provided
+    redirectUrl: redirectUrl || (process.env.BASE_URL || 'http://localhost:3000') + '/dashboard',
     metadata: templateId || templatePreview ? { templateId, templatePreview } : undefined,
   };
 
-  // remove any undefined/null properties to avoid sending explicit nulls which Monnify rejects
-  function stripNulls(input: any): any {
-    if (input === null || input === undefined) return undefined;
-    if (Array.isArray(input)) return input.map(stripNulls).filter((v) => v !== undefined);
-    if (typeof input === 'object') {
-      const out: any = {};
-      for (const [k, v] of Object.entries(input)) {
-        const s = stripNulls(v);
-        if (s !== undefined) out[k] = s;
-      }
-      return Object.keys(out).length ? out : undefined;
-    }
-    return input;
-  }
+  // strip null/undefined fields because Monnify is picky
+  const clean = JSON.parse(JSON.stringify(body));
 
-  const safeBody = stripNulls(body) ?? {};
-
-  const res = await fetch(`${BASE}/api/v1/merchant/transactions/init-transaction`, {
+  const resp = await fetch(`${BASE}/api/v1/merchant/transactions/init-transaction`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(safeBody),
+    body: JSON.stringify(clean),
   });
 
-  const text = await res.text();
-  let parsed: any = null;
-  try { parsed = JSON.parse(text); } catch (e) { parsed = text; }
-
-  if (!res.ok) {
-    const bodySnippet = typeof parsed === 'string' ? parsed : (parsed?.responseMessage || parsed?.message || JSON.stringify(parsed));
-    const err = {
-      status: res.status,
-      url: `${BASE}/api/v1/merchant/transactions/init-transaction`,
-      responseBody: bodySnippet,
-      requestBody: safeBody,
-    };
-    throw new Error(`Monnify init error: ${JSON.stringify(err)}`);
+  const text = await resp.text();
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
   }
 
-  // responseBody.checkoutUrl typically contains the payment link
-  return parsed?.responseBody ?? parsed;
+  if (!resp.ok) {
+    console.error('Monnify init failed', data);
+    throw new Error(data?.responseMessage || data?.message || 'Monnify init error');
+  }
+
+  return data?.responseBody || data;
 }
 
 export default { getAccessToken, initializeTransaction };

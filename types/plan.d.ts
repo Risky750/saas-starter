@@ -1,10 +1,10 @@
-export type Interval = "monthly" | "quarterly";
 export type Plan = {
   id: string;
   name: string;
+  quarterly: number; // clearer than `price`
   monthly: number;
-  quarterly:any
   features: string[];
+  cta: string;
   popular?: boolean;
-  accent?: string; 
 };
+export type Interval = "monthly" | "quarterly";

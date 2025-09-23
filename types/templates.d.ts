@@ -13,3 +13,10 @@ export type TemplateStore = {
   setSelectedPreview?: (url: string | null) => void;
 };
 
+export type Template = {
+  id: string;
+  title: string;
+  desc?: string;
+  images: string[];
+};
+

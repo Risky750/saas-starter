@@ -1,14 +1,13 @@
 "use client";
-
-import React, { FormEvent, useState } from 'react';
+import React, { FormEvent, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from "lucide-react";
 import { useRegisterStore } from "@/app/stores/registerStores";
 
 export default function Register() {
-  const { name, phoneNumber, email, setField } = useRegisterStore();
+  const { name, email, setField } = useRegisterStore();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,23 +17,23 @@ export default function Register() {
     setLoading(true);
     setError(null);
 
-    const res = await fetch('/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phoneNumber, email }),
+    const res = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email }), // phoneNumber removed
     });
 
     const json = await res.json();
     setLoading(false);
-    if (!res.ok) return setError(json.message ?? 'Something went wrong');
-    // keep on the same page after save
+    if (!res.ok) return setError(json.message ?? "Something went wrong");
+  
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-[#F4EFEA]">
+    <div className="flex justify-center items-center  ">
       <Card className="w-full max-w-sm p-6 space-y-5 bg-white rounded-2xl shadow-lg">
-        <form className="space-y-4">
-          <h1 className="text-xl font-semibold text-[#7D141D]">Your details</h1>
+        <form className="space-y-4" onSubmit={handleSave}>
+          <h1 className="text-xl font-semibold text-[#7D141D]"></h1>
 
           <Input
             placeholder="Name / Business Name"
@@ -44,14 +43,7 @@ export default function Register() {
             required
             className="border-[#7D141D]/30 focus:ring-[#FF1E27]"
           />
-          <Input
-            placeholder="Phone Number"
-            value={phoneNumber}
-            onChange={(e) => setField("phoneNumber", e.target.value)}
-            type="tel"
-            required
-            className="border-[#7D141D]/30 focus:ring-[#FF1E27]"
-          />
+
           <Input
             placeholder="Email"
             value={email}
@@ -61,11 +53,9 @@ export default function Register() {
             className="border-[#7D141D]/30 focus:ring-[#FF1E27]"
           />
 
-          {/* Save button stays with the details form */}
           <div className="flex flex-col gap-3">
-            {error && <p className="text-sm text-red-600">{error}</p>}
             <Button
-              onClick={(e) => handleSave(e)}
+              type="submit"
               className="w-full bg-[#7D141D] text-white hover:bg-[#FF1E27] transition"
               disabled={loading}
             >
@@ -75,9 +65,13 @@ export default function Register() {
                   Saving…
                 </>
               ) : (
-                'Save'
+                "Save"
               )}
             </Button>
+
+            {error && (
+              <p className="text-sm text-red-600 text-center">{error}</p>
+            )}
           </div>
         </form>
       </Card>

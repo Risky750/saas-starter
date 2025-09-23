@@ -1,34 +1,57 @@
 import { initializeTransaction as monnifyInitialize } from '@/lib/payments/monnify';
 
-function planToAmount(planId: string | null) {
+function planToAmount(planId: string | null): number | null {
   const basic = process.env.MONNIFY_AMOUNT_BASIC ? Number(process.env.MONNIFY_AMOUNT_BASIC) : 3500;
-  const pro = process.env.MONNIFY_AMOUNT_PRO ? Number(process.env.MONNIFY_AMOUNT_PRO) : 5000;
-  if (!planId) return null;
-  if (planId === 'basic') return basic;
-  if (planId === 'pro') return pro;
-  return null;
+  const pro   = process.env.MONNIFY_AMOUNT_PRO ? Number(process.env.MONNIFY_AMOUNT_PRO)   : 5000;
+
+  switch (planId) {
+    case 'basic':
+      return basic;
+    case 'pro':
+      return pro;
+    default:
+      return null;
+  }
 }
 
 export async function checkoutAction(formData: FormData) {
-  const planId = String(formData.get('planId') ?? '') || null;
-  const templateId = String(formData.get('templateId') ?? '') || null;
-  const templatePreview = String(formData.get('templatePreview') ?? '') || null;
+  const planId     = formData.get('planId')?.toString() || null;
+  const templateId = formData.get('templateId')?.toString() || null;
+  const preview    = formData.get('templatePreview')?.toString() || null;
+  const name       = formData.get('name')?.toString().trim() || 'Customer';
+  const email      = formData.get('email')?.toString().trim() || 'no-reply@example.com';
 
-  if (process.env.MONNIFY_API_KEY && process.env.MONNIFY_SECRET_KEY && process.env.MONNIFY_CONTRACT_CODE) {
-    const amount = planToAmount(planId);
-    if (!amount) return new Response(JSON.stringify({ error: 'Invalid plan' }), { status: 400 });
-    try {
-      const paymentReference = (globalThis as any).crypto?.randomUUID?.() ?? Date.now().toString();
-  const payload: any = { amount, customerName: String(formData.get('name') ?? 'Customer'), customerEmail: String(formData.get('email') ?? 'no-reply@example.com'), paymentReference, templateId, templatePreview };
-  const resp = await monnifyInitialize(payload);
-      const checkoutUrl = resp?.checkoutUrl ?? resp?.checkout_url;
-      if (checkoutUrl) return new Response(JSON.stringify({ checkoutUrl, paymentReference }), { status: 200 });
-      return new Response(JSON.stringify({ error: 'Failed to create monnify transaction' }), { status: 500 });
-    } catch (err: any) {
-      console.error('monnify checkoutAction error', err);
-      return new Response(JSON.stringify({ error: err?.message ?? 'Monnify error' }), { status: 500 });
-    }
+  if (!process.env.MONNIFY_API_KEY || !process.env.MONNIFY_SECRET_KEY || !process.env.MONNIFY_CONTRACT_CODE) {
+    return new Response(JSON.stringify({ error: 'Payment provider not configured' }), { status: 400 });
   }
 
-  return new Response(JSON.stringify({ error: 'No payment provider configured' }), { status: 400 });
+  const amount = planToAmount(planId);
+  if (!amount) {
+    return new Response(JSON.stringify({ error: 'Invalid plan selected' }), { status: 400 });
+  }
+
+  try {
+    const paymentReference = (globalThis as any).crypto?.randomUUID?.() ?? Date.now().toString();
+
+    const payload = {
+      amount,
+      customerName: name,
+      customerEmail: email,
+      paymentReference,
+      templateId,
+      templatePreview: preview,
+    };
+
+    const resp = await monnifyInitialize(payload);
+    const checkoutUrl = resp?.checkoutUrl ?? resp?.checkout_url;
+
+    if (checkoutUrl) {
+      return new Response(JSON.stringify({ checkoutUrl, paymentReference }), { status: 200 });
+    }
+
+    return new Response(JSON.stringify({ error: 'Could not create Monnify transaction' }), { status: 500 });
+  } catch (err: any) {
+    console.error('checkoutAction error:', err);
+    return new Response(JSON.stringify({ error: err?.message || 'Monnify request failed' }), { status: 500 });
+  }
 }

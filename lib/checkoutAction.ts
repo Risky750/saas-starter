@@ -15,11 +15,11 @@ export async function startCheckout(planId: string) {
   }
 }
 
-export async function startMonnifyCheckout({ planId, name, email, templateId, templatePreview }: { planId: string; name?: string; email?: string; templateId?: string | null; templatePreview?: string | null; }): Promise<{ checkoutUrl?: string; paymentReference?: string } > {
+export async function startMonnifyCheckout({ planId, name, email, templateId, templatePreview, amount }: { planId: string; name?: string; email?: string; templateId?: string | null; templatePreview?: string | null; amount?: number | null; }): Promise<{ checkoutUrl?: string; paymentReference?: string } > {
   const res = await fetch('/api/monnify/initialize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ planId, name, email, templateId, templatePreview }),
+    body: JSON.stringify({ planId, name, email, templateId, templatePreview, amount }),
   });
 
   const json = await res.json();

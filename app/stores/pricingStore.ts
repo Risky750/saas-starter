@@ -1,29 +1,29 @@
 import { create } from "zustand";
-import { persist } from 'zustand/middleware';
+import { persist } from "zustand/middleware";
 import type { Plan, Interval } from "@/types/pricing";
 
-interface PricingState {
-  plans: Plan[];           // runtime list
+type PricingState = {
+  plans: Plan[];          
   interval: Interval;
-  planId: string | null;   // any string
-  setPlans: (p: Plan[]) => void;
+  planId: string | null;
+  setPlans: (list: Plan[]) => void;
   setInterval: (i: Interval) => void;
-  setPlan: (id: string) => void;
-}
+  setPlanId: (id: string | null) => void;
+};
 
 export const usePricingStore = create<PricingState>()(
   persist(
     (set) => ({
       plans: [],
-      interval: "month",
+      interval: "quarterly",
       planId: null,
-      setPlans: (p) => set({ plans: p }),
-      setInterval: (i) => set({ interval: i }),
-      setPlan: (id) => set({ planId: id }),
+      setPlans: (plans) => set({ plans }),
+      setInterval: (interval) => set({ interval }),
+      setPlanId: (planId) => set({ planId }),
     }),
     {
-      name: 'pricing-storage',
-      partialize: (state) => ({ planId: state.planId, interval: state.interval }),
+      name: "pricing-storage",
+      partialize: ({ interval, planId }) => ({ interval, planId }), // only these survive reload
     }
   )
 );

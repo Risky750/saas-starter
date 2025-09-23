@@ -1,33 +1,52 @@
 export async function startCheckout(planId: string) {
-	const res = await fetch('/api/checkout', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ planId }),
-	});
+  const res = await fetch('/api/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ planId }),
+  });
 
-	const json = await res.json();
-	if (!res.ok) throw new Error(json?.error ?? 'Failed to start checkout');
+  const data = await res.json();
 
-	if (json.url) {
-		window.location.href = json.url;
-	} else {
-		throw new Error('No checkout URL returned');
-	}
+  if (!res.ok) {
+    throw new Error(data.error || 'checkout failed');
+  }
+
+  if (data.url) {
+    window.location.href = data.url;
+    return;
+  }
+
+  throw new Error('no checkout url');
 }
 
-export async function startMonnifyCheckout({ planId, name, email, templateId, templatePreview }: { planId: string; name?: string; email?: string; templateId?: string | null; templatePreview?: string | null; }): Promise<{ checkoutUrl?: string; paymentReference?: string } > {
-	const res = await fetch('/api/monnify/initialize', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ planId, name, email, templateId, templatePreview }),
-	});
+export async function startMonnifyCheckout(opts: {
+  planId: string;
+  name?: string;
+  email?: string;
+  templateId?: string | null;
+  templatePreview?: string | null;
+  amount?: number | null;
+}): Promise<{ checkoutUrl?: string; paymentReference?: string }> {
+  const res = await fetch('/api/monnify/initialize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(opts),
+  });
 
-	const json = await res.json();
-	if (!res.ok) throw new Error(json?.error ?? 'Failed to start Monnify checkout');
+  const data = await res.json();
 
-	const checkoutUrl = json.checkoutUrl ?? json.url ?? json.checkout_url;
-	const paymentReference = json.paymentReference ?? json.payment_reference;
-	return { checkoutUrl, paymentReference };
+  if (!res.ok) {
+    throw new Error(data.error || 'monnify init failed');
+  }
+
+  const checkoutUrl = data.checkoutUrl || data.url || data.checkout_url;
+  const paymentReference = data.paymentReference || data.payment_reference;
+
+  if (!checkoutUrl) {
+    throw new Error('no monnify checkout url');
+  }
+
+  return { checkoutUrl, paymentReference };
 }
 
 export default startCheckout;
