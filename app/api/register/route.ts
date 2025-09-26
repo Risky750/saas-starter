@@ -9,8 +9,12 @@ export async function POST(req: Request) {
     if (!email) {
       return NextResponse.json({ error: 'Missing email' }, { status: 400 });
     }
+    if (!name) {
+      return NextResponse.json({ error: 'Missing name' }, { status: 400 });
+    }
+    
 
-    const POSTGRES_URL = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
+    {/*const POSTGRES_URL = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
     if (!POSTGRES_URL) {
       return NextResponse.json({ error: 'Missing POSTGRES_URL' }, { status: 500 });
     }
@@ -40,9 +44,9 @@ export async function POST(req: Request) {
       VALUES (${name ?? null}, ${email})
       RETURNING id, email
     `;
-    const newContact = insert[0];
+    const newContact = insert[0];*/}
 
-    return NextResponse.json({ ok: true, created: true, contact: newContact });
+    return NextResponse.json({ ok: true, created: true, /*contact: newContact*/ });
   } catch (err: any) {
     console.error('register route error:', err);
     return NextResponse.json({ error: err?.message ?? 'Internal error' }, { status: 500 });

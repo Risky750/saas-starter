@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { GlassesIcon, CreditCard, Globe, ArrowRight } from "lucide-react";
+import { GlassesIcon, HandshakeIcon, Globe, ArrowRight } from "lucide-react";
 import Testimonials from "@/components/dashboard/Testimonials";
 
 export default function HomePage() {
@@ -25,11 +25,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 lg:px-8 grid gap-10 lg:grid-cols-2 items-center">
           <div className="text-center lg:text-left">
             <h1 className="text-4xl lg:text-6xl font-bold leading-tight">
-              A website you’ll actually like
+             From Google to socials — your reach has no limits
             </h1>
             <p className="mt-4 text-lg text-[#7D141D]/80">
-              Fast setup, fair price, and it doesn’t look cheap — finally.
-            </p>
+   A polished digital presence proves your skills and credibility at first glance.            </p>
 
             <Button
               size="lg"
@@ -59,19 +58,19 @@ export default function HomePage() {
             <div className="h-12 w-12 flex items-center justify-center rounded-full bg-[#FF1E27] text-white mb-4">
               <GlassesIcon className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-semibold">Looks sharp</h3>
+            <h3 className="text-lg font-semibold">Show up everywhere</h3>
             <p className="mt-2 text-sm text-[#7D141D]/70">
-              Clean pages that look pricey — without the big bill.
+             Be found on Google, social media, and beyond — wherever your audience looks.
             </p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow">
             <div className="h-12 w-12 flex items-center justify-center rounded-full bg-[#FF1E27] text-white mb-4">
-              <CreditCard className="h-6 w-6" />
+              <HandshakeIcon className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-semibold">Always open</h3>
+            <h3 className="text-lg font-semibold">Build instant trust</h3>
             <p className="mt-2 text-sm text-[#7D141D]/70">
-              Customers can find you at 3 AM if they want to.
+            Your online presence speaks for you — make sure it builds trust instantly.
             </p>
           </div>
 
@@ -79,9 +78,9 @@ export default function HomePage() {
             <div className="h-12 w-12 flex items-center justify-center rounded-full bg-[#FF1E27] text-white mb-4">
               <Globe className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-semibold">Go global</h3>
+            <h3 className="text-lg font-semibold">Attract more opportunities</h3>
             <p className="mt-2 text-sm text-[#7D141D]/70">
-              Share, sell, and connect with anyone — anywhere.
+              More visibility means more clients, jobs, and collaborations knocking on your door.
             </p>
           </div>
         </div>

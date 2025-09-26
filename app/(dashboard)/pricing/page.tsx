@@ -20,7 +20,7 @@ export default function PriceCards() {
 
   const plans: Plan[] = [
     {
-      id: "basic",
+      id: "2",
       name: "Standard",
       monthly: 3500,
   quarterly: 3166.66,
@@ -32,7 +32,7 @@ export default function PriceCards() {
       cta: "Get Started",
     },
     {
-      id: "pro",
+      id: "2",
       name: "Premium",
       monthly: 5000,
       quarterly: 4666.66,
@@ -71,9 +71,8 @@ export default function PriceCards() {
       <div className="w-full max-w-6x space-y-6">
         {/* Header + toggle */}
         <div className="flex items-center justify-between gap-4 mb-6">
-          <h2 className="text-2xl font-bold text-[#7D141D]">Choose a plan</h2>
 </div>
-<div className="place-items-center">
+<div className="place-items-center mt-10 mb-10">
           <div className="flex items-center gap-3 text-[#7D141D]">
             <span
               className={

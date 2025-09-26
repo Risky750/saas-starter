@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { initializeTransaction } from "@/lib/payments/monnify";
 import crypto from "node:crypto";
-import postgres from "postgres";
 
 const PLAN_AMOUNTS: Record<string, number> = {
   basic: Number(process.env.MONNIFY_AMOUNT_BASIC) || 3500,
@@ -18,7 +17,6 @@ function resolveAmount(planId: string | null, billingCycle: string | null, expli
   if (billingCycle === "quarterly") {
     base = base * 3; 
   }
-
   return base;
 }
 
@@ -47,27 +45,13 @@ export async function POST(req: Request) {
 
     const reference = crypto.randomUUID();
 
-    // Save order
-    const POSTGRES_URL = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
-    if (!POSTGRES_URL) {
-      throw new Error("Missing POSTGRES_URL or DATABASE_URL");
-    }
-    const client = postgres(POSTGRES_URL, { ssl: "require" });
-
-    // convert to kobo (whole-number cents)
-    const amountKobo = Math.round(amount * 100);
-
-    await client`
-      INSERT INTO orders (plan_id, amount, reference, status, customer_email, customer_name)
-      VALUES (${planId}, ${amountKobo}, ${reference}, 'pending', ${email}, ${name})
-    `;
-
-    // Init Monnify transaction
+    // Monnify expects naira, not kobo
     initPayload = {
       amount,
       customerName: name,
       customerEmail: email,
       paymentReference: reference,
+      redirectUrl: `${process.env.BASE_URL}/dashboard`,
     };
 
     const { checkoutUrl } = await initializeTransaction(initPayload);
@@ -76,4 +60,5 @@ export async function POST(req: Request) {
   } catch (e: any) {
     console.error("Monnify init error:", e, "initPayload:", initPayload);
     return NextResponse.json({ error: "Provider error" }, { status: 502 });
-  }}
+  }
+}

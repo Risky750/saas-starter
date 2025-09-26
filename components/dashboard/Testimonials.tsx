@@ -30,8 +30,7 @@ const testimonials: Testimonial[] = [
 
 export default function Testimonials() {
   return (
-    <section className="bg-[#fffaf7] py-12">
-      <div className="max-w-5xl mx-auto px-4">
+      <div className="max-w-5xl mx-auto px-4 py-12">
         <h2 className="text-2xl font-semibold text-[#7D141D] mb-8 text-center">
           What people are saying
         </h2>
@@ -47,11 +46,10 @@ export default function Testimonials() {
                   <p className="text-xs text-[#7D141D]/70">{t.title}</p>
                 </div>
               </div>
-              <p className="text-sm text-gray-700">“{t.quote}”</p>
+              <p className="text-sm italic text-gray-700">“{t.quote}”</p>
             </div>
           ))}
         </div>
       </div>
-    </section>
   );
 }

@@ -60,7 +60,7 @@ export async function initializeTransaction({
     paymentReference,
     contractCode: CONTRACT_CODE,
     currencyCode: currency,
-    redirectUrl: redirectUrl || (process.env.BASE_URL || 'http://localhost:3000') + '/dashboard',
+    redirectUrl: `${process.env.BASE_URL}/dashboard`,
     metadata: templateId || templatePreview ? { templateId, templatePreview } : undefined,
   };
 
