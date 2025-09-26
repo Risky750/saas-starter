@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const planId = body.planId ? String(body.planId) : null;
-    const billingCycle = body.billingCycle ? String(body.billingCycle) : "monthly"; // new
+    const billingCycle = body.billingCycle ? String(body.billingCycle) : "monthly";
     const name   = String(body.name ?? "").trim();
     const email  = String(body.email ?? "").trim();
     const explicitAmount = body.amount ? Number(body.amount) : null;
@@ -54,9 +54,12 @@ export async function POST(req: Request) {
     }
     const client = postgres(POSTGRES_URL, { ssl: "require" });
 
+    // convert to kobo (whole-number cents)
+    const amountKobo = Math.round(amount * 100);
+
     await client`
       INSERT INTO orders (plan_id, amount, reference, status, customer_email, customer_name)
-      VALUES (${planId}, ${amount}, ${reference}, 'pending', ${email}, ${name})
+      VALUES (${planId}, ${amountKobo}, ${reference}, 'pending', ${email}, ${name})
     `;
 
     // Init Monnify transaction
@@ -73,5 +76,4 @@ export async function POST(req: Request) {
   } catch (e: any) {
     console.error("Monnify init error:", e, "initPayload:", initPayload);
     return NextResponse.json({ error: "Provider error" }, { status: 502 });
-  }
-}
+  }}

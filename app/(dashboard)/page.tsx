@@ -10,6 +10,16 @@ export default function HomePage() {
 
   return (
     <main className="bg-[#F4EFEA] text-[#7D141D]">
+          <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <p className="text-2xl font-bold text-[#7D141D] tracking-tight">
+            CraftmyWeb
+          </p>
+        </div>
+      </div>
+    </header>
       {/* HERO */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 lg:px-8 grid gap-10 lg:grid-cols-2 items-center">
@@ -96,6 +106,11 @@ export default function HomePage() {
           </Button>
         </div>
       </section>
+            <footer className="bg-white border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-sm text-[#7D141D]/60">
+          © {new Date().getFullYear()} Craft my Web.Ng – All rights reserved.
+        </div>
+      </footer>
     </main>
   );
 }

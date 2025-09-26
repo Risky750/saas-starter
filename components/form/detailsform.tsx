@@ -30,11 +30,12 @@ export default function Register() {
   };
 
   return (
-    <div className="flex justify-center items-center  ">
-      <Card className="w-full max-w-sm p-6 space-y-5 bg-white rounded-2xl shadow-lg">
+    <div className=" justify-center items-center mb-10 mx-5 ">
+      <div className=" max-w-sm p-6 space-y-5 bg-white rounded-2xl ">
         <form className="space-y-4" onSubmit={handleSave}>
-          <h1 className="text-xl font-semibold text-[#7D141D]"></h1>
-
+ <h2 className="text-lg sm:text-2xl text-gray-900 mb-6">
+            Fill your details before proceeding
+          </h2>
           <Input
             placeholder="Name / Business Name"
             value={name}
@@ -74,7 +75,7 @@ export default function Register() {
             )}
           </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }

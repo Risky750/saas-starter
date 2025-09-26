@@ -21,11 +21,11 @@ export default function PriceCards() {
   const plans: Plan[] = [
     {
       id: "basic",
-      name: "Basic",
+      name: "Standard",
       monthly: 3500,
   quarterly: 3166.66,
   features: [
-    "1-page site",
+    "professional Email",
     "Secured Website",
   ],
       popular: false,
@@ -33,15 +33,13 @@ export default function PriceCards() {
     },
     {
       id: "pro",
-      name: "Pro",
+      name: "Premium",
       monthly: 5000,
       quarterly: 4666.66,
       features: [
-        "Unlimited Pages",
-        "Online Payment",
-        "Be easily found on Google",
-        "Project Gallery",
         "Free professional email",
+        "Secured Website",
+        "payment services intergration"
       ],
       popular: true,
       cta: "Get Started",
@@ -69,12 +67,13 @@ export default function PriceCards() {
     interval === "monthly" ? plan.monthly : plan.quarterly;
 
   return (
-    <section className="flex items-center justify-center bg-[#F4EFEA] px-4 py-8">
-      <div className="w-full max-w-6xl">
+    <section className="flex  justify-center bg-[#F4EFEA] h-screen w-full px-4 py-8 gap-8">
+      <div className="w-full max-w-6x space-y-6">
         {/* Header + toggle */}
         <div className="flex items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-bold text-[#7D141D]">Choose a plan</h2>
-
+</div>
+<div className="place-items-center">
           <div className="flex items-center gap-3 text-[#7D141D]">
             <span
               className={
@@ -112,11 +111,11 @@ export default function PriceCards() {
         </div>
 
         {/* Cards */}
-        <div className="grid md:grid-cols-2 sm:grid-cols-1 gap-6  place-items-center mt-2">
+        <div className="md:flex md:flex-col-2 md:place-content-center gap-8">
           {plans.map((plan) => (
             <Card
               key={plan.id}
-              className="relative flex flex-col p-10 rounded-2xl shadow-lg border border-gray-200 transition-transform hover:scale-[1.02] hover:shadow-xl min-h-[420px]"
+              className=" flex mb-10 sm:mx-8 flex-col p-8 md:px-30 rounded-2xl shadow-lg border border-gray-200 transition-transform hover:scale-[1.02] hover:shadow-xl min-h-[420px]"
             >
 
               <h3 className="text-xl font-bold text-[#7D141D]">{plan.name}</h3>

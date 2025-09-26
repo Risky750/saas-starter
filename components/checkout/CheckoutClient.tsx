@@ -77,7 +77,7 @@ function PayButton({
         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `Pay ${naira(amount)}`}
       </Button>
       {showError && (
-        <div className="bottom-8 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-lg z-50 animate-fade-in">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-lg z-50 animate-fade-in">
           Please enter your details before proceeding with payment
         </div>
       )}
@@ -110,186 +110,212 @@ export default function CheckoutClient() {
   const isMonthly = interval === "monthly";
   const [addDomain, setAddDomain] = useState(isQuarterly ? true : false);
 
-  React.useEffect(() => {
-    if (isQuarterly) setAddDomain(true);
-    if (isMonthly) setAddDomain(false);
-  }, [interval]);
-
-  let total = snap.total !== null ? snap.total : planPrice;
-
-  if (isMonthly && addDomain) {
-    total += DOMAIN_COST;
-  }
-
-  if (isQuarterly) {
-    total = planPrice * 3;
-  }
-
+  // Fixed: Added missing dependency array and proper effect logic
   useEffect(() => {
-    if (params.get("template") || params.get("plan")) {
+    if (isQuarterly) {
+      setAddDomain(true);
+    } else if (isMonthly) {
+      setAddDomain(false);
+    }
+  }, [interval, isQuarterly, isMonthly]);
+
+  // Fixed: Corrected total calculation logic
+  let total = snap.total !== null ? snap.total : planPrice;
+  if (isMonthly && addDomain) {
+    total = planPrice + DOMAIN_COST;
+  } else if (isQuarterly) {
+    total = planPrice * 3; // Quarterly already includes domain
+  }
+
+  // Fixed: Added proper dependency array and moved setChoice call
+  useEffect(() => {
+    const templateParam = params.get("template");
+    const planParam = params.get("plan");
+    
+    if (templateParam || planParam) {
       setChoice(
-        params.get("template") || selectedId || "",
-        params.get("plan") || activePlanId || ""
+        templateParam || selectedId || "",
+        planParam || activePlanId || ""
       );
     }
-  }, []);
+  }, [params, selectedId, activePlanId, setChoice]);
 
   return (
-  <main className="sm:px-6 lg:px-2 min-h-screen pb-40 overflow-auto">
-      <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* left – details */}
-        <section className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
-          <h2 className="text-xl sm:text-2xl text-gray-900 mb-6">
-            Fill your details before proceeding
-          </h2>
-          <Register />
-        </section>
-
-        {/* right – summary */}
-        <aside className="bg-white rounded-2xl shadow-md p-6 sm:p-8 flex flex-col">
-          <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
-            Order summary
-          </h3>
-
-          {/* template */}
-          <div className="mb-4">
-            <p className="text-sm text-gray-500 mb-2">Template</p>
-            <div className="flex items-center gap-4">
-              <div className="relative w-24 h-14 rounded-lg overflow-hidden border">
-                {selectedPreview ? (
-                  <img
-                    src={selectedPreview}
-                    alt="template"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-100 grid place-items-center text-xs text-gray-400">
-                    No preview
-                  </div>
-                )}
-              </div>
-              <span className="font-medium capitalize text-gray-800">
-                {activeTemplate
-                  ? activeTemplate.replace(/[-_]/g, " ")
-                  : "Not chosen"}
-              </span>
-            </div>
-          </div>
-
-          {/* plan */}
-          <div className="mb-4">
-            <p className="text-sm text-gray-500 mb-2">Plan</p>
-            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-              <div>
-                <p className="text-sm text-gray-500">
-                  Billed{" "}
-                  {interval === "quarterly"
-                    ? "quarterly"
-                    : interval}
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-semibold text-gray-900">
-                  {naira(planPrice)}
+    <div className="min-h-screen w-full bg-gray-50 flex flex-col">
+      <div className="flex-1 max-w-6xl mx-auto px-4 py-8 lg:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+          {/* Left side - Fixed layout structure */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* User details - Fixed grid layout */}
+            <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
+              <div className="lg:grid lg:grid-cols-2 gap-8">
+                {/* Register component */}
+                <div className="mb-6 lg:mb-0">
+                  <Register />
                 </div>
-                {isQuarterly && (
-                  <div className="text-sm text-gray-500">
-                    * 3
+                
+                {/* Plan Features and Template - Fixed structure */}
+                <div className="space-y-6">
+                  {/* Features */}
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Features</p>
+                    <ul className="space-y-2 text-sm text-gray-600">
+                      {plan?.features?.map((feature: string) => (
+                        <li key={feature} className="flex items-center gap-2">
+                          <span className="text-rose-600">✓</span>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                )}
+                  
+                  {/* Template - Fixed structure */}
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Template</p>
+                    <div className="relative w-full h-32 rounded-lg overflow-hidden border">
+                      {selectedPreview ? (
+                        <img
+                          src={selectedPreview}
+                          alt="template"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 grid place-items-center text-xs text-gray-400">
+                          No preview
+                        </div>
+                      )}
+                    </div>
+                    <span className="font-medium capitalize text-gray-800 mt-2 block">
+                      {activeTemplate
+                        ? activeTemplate.replace(/[-_]/g, " ")
+                        : "Not chosen"}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          {/* features */}
-          <div className="mb-2">
-            <p className="text-sm text-gray-500 mb-2">Features</p>
-             <ul className="mb-6 space-y-2 text-sm text-gray-500">
-                  {plan?.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2">
-                      <span className="text-[#FF1E27]">✓</span>
-                      {feature}
-                    </li>
-                  ))}
-              </ul>
-          </div>
-
-          {/* domain */}
-          <div className="mb-2">
-            <p className="text-sm text-gray-500 mb-2">Custom domain</p>
-            {isMonthly ? (
-              <>
-                <label
-                  className={`w-full flex items-center justify-between rounded-lg border p-4 transition ${
-                    addDomain
-                      ? "border-rose-500 bg-rose-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <span className="font-medium text-gray-800">Add domain / per year <br />(one-off)</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600">{naira(DOMAIN_COST)}</span>
-                    <input
-                      type="checkbox"
-                      checked={addDomain}
-                      onChange={(e) => setAddDomain(e.target.checked)}
-                      disabled={isQuarterly}
-                      className="w-5 h-5 accent-rose-500 border-gray-300 rounded focus:ring-rose-500"
-                    />
+          
+          {/* Right side: order summary - Fixed structure */}
+          <aside className="bg-white rounded-2xl shadow-md p-6 sm:p-8 flex flex-col h-full">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
+              Order summary
+            </h3>
+            
+            {/* Plan section - Fixed structure */}
+            <div className="mb-4">
+              <p className="text-sm text-gray-500 mb-2">Plan</p>
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Billed {interval === "quarterly" ? "quarterly" : interval}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-semibold text-gray-900">
+                    {naira(planPrice)}
                   </div>
-                </label>
-                {addDomain && (
-                  <div className="flex items-center justify-between mt-2 px-2">
-                    <span className="text-sm text-gray-500">Domain cost added</span>
-                    <span className="text-sm text-gray-900 font-semibold">+ {naira(DOMAIN_COST)}</span>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-3">
-                <Check className="w-5 h-5" />
-                <span className="text-sm">
-                  Free domain worth {naira(DOMAIN_COST)}
-                </span>
+                  {isQuarterly && (
+                    <div className="text-sm text-gray-500">* 3</div>
+                  )}
+                </div>
               </div>
-            )}
             </div>
-          {/* total */}
-          <div className="mt-auto pt-2 border-t border-gray-100">
-            {isQuarterly ? (
-              <>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-500">Subtotal</span>
-                  <span className="text-lg font-semibold text-gray-900">{naira(planPrice * 3 + DOMAIN_COST)}</span>
+            
+            {/* Domain section - Fixed structure */}
+            <div className="mb-4">
+              <p className="text-sm text-gray-500 mb-2">Custom domain</p>
+              {isMonthly ? (
+                <>
+                  <label
+                    className={`w-full flex items-center justify-between rounded-lg border p-4 transition cursor-pointer ${
+                      addDomain
+                        ? "border-rose-500 bg-rose-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <span className="font-medium text-gray-800">
+                      Add domain / per year <br/>(one-off)
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-600">
+                        {naira(DOMAIN_COST)}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={addDomain}
+                        onChange={(e) => setAddDomain(e.target.checked)}
+                        className="w-5 h-5 accent-rose-500 border-gray-300 rounded focus:ring-rose-500"
+                      />
+                    </div>
+                  </label>
+                  {addDomain && (
+                    <div className="flex items-center justify-between mt-2 px-2">
+                      <span className="text-sm text-gray-500">
+                        Domain cost added
+                      </span>
+                      <span className="text-sm text-gray-900 font-semibold">
+                        + {naira(DOMAIN_COST)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-3">
+                  <Check className="w-5 h-5" />
+                  <span className="text-sm">
+                    Free domain worth {naira(DOMAIN_COST)}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-500">Domain cost</span>
-                  <span className="text-lg text-gray-400 line-through">{naira(DOMAIN_COST)}</span>
-                </div>
+              )}
+            </div>
+
+            {/* Totals - Fixed structure */}
+            <div className="mt-auto pt-4 border-t border-gray-100">
+              {isQuarterly ? (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-500">Subtotal</span>
+                    <span className="text-lg font-semibold text-gray-900">
+                      {naira(planPrice * 3 + DOMAIN_COST)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-500">Domain cost</span>
+                    <span className="text-lg text-gray-400 line-through">
+                      {naira(DOMAIN_COST)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-700 font-bold">Total</span>
+                    <span className="text-xl font-bold text-gray-900">
+                      {naira(planPrice * 3)}
+                    </span>
+                  </div>
+                </>
+              ) : (
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-500 font-bold">Total</span>
-                  <span className="text-xl sm:text-2xl font-bold text-gray-900">{naira(planPrice * 3)}</span>
+                  <span className="text-gray-500">Total</span>
+                  <span className="text-xl sm:text-2xl font-bold text-gray-900">
+                    {naira(total)}
+                  </span>
                 </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-gray-500">Total</span>
-                <span className="text-xl sm:text-2xl font-bold text-gray-900">{naira(total)}</span>
-              </div>
-            )}
-            <PayButton
-              amount={total}
-              planId={activePlanId}
-              name={name}
-              email={email}
-              templateId={activeTemplate}
-              templatePreview={selectedPreview}
-            />
-            <p className="text-xs text-gray-400 text-center mt-3">
-              Secure checkout • Instant activation
-            </p>
-          </div>
-        </aside>
+              )}
+              <PayButton
+                amount={total}
+                planId={activePlanId}
+                name={name}
+                email={email}
+                templateId={activeTemplate}
+                templatePreview={selectedPreview}
+              />
+              <p className="text-xs text-gray-400 text-center mt-3">
+                Secure checkout • Instant activation
+              </p>
+            </div>
+          </aside>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
