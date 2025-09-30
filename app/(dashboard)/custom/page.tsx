@@ -5,7 +5,6 @@ import { Input } from "../../../components/ui/input";
 import { Mail } from "lucide-react";
 import { Card } from "../../../components/ui/card";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 export default function CustomDesignPage() {
   const [sent, setSent] = useState(false);
@@ -25,14 +24,6 @@ export default function CustomDesignPage() {
   }
 
   return (
-<div className="relative min-h-screen">
-  <Image
-    src="/images/Group7(1).svg"
-    alt="Background"
-    fill
-    priority
-    className="object-cover object-center -z-10"
-  />
     <main
       className="min-h-screen text-[#7D141D] px-4 py-16"
     >
@@ -98,6 +89,6 @@ export default function CustomDesignPage() {
         </Card>
       </div>
     </main>
-    </div>
+
   )
 }

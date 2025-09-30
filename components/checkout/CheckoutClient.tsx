@@ -11,76 +11,17 @@ import { usePricingStore } from "@/app/stores/pricingStore";
 import type { Plan as PricePlan } from "@/types/pricing";
 import { Check, Loader2 } from "lucide-react";
 
-// ----------------- currency formatter -----------------
 const naira = (n: number) =>
   new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(n);
 
-// ----------------- Payment Button -----------------
-function PayButton({ amount, planId, name, email, templateId, templatePreview }: {
-  amount: number;
-  planId?: string;
-  name: string;
-  email: string;
-  templateId?: string | null;
-  templatePreview?: string | null;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [showError, setShowError] = useState(false);
-
-  const handlePay = async () => {
-    if (!name || !email) {
-      setShowError(true);
-      setTimeout(() => setShowError(false), 3000);
-      return;
-    }
-    setLoading(true);
-    try {
-      await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, planId }),
-      });
-
-      const res = await fetch("/api/monnify/initialize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, name, email, templateId, templatePreview, amount }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "monnify init failed");
-
-      // 👇 send user to Monnify checkout
-      window.location.href = data.checkoutUrl;
-    } catch (e: any) {
-      alert(e?.message || "Payment could not be started");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <>
-      <Button
-        onClick={handlePay}
-        disabled={loading}
-        className="w-full h-12 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium transition disabled:opacity-50"
-      >
-        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `Pay ${naira(amount)}`}
-      </Button>
-      {showError && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-lg z-50 animate-fade-in">
-          Please enter your details before proceeding with payment
-        </div>
-      )}
-    </>
-  );
+declare global {
+  interface Window {
+    MonnifySDK: any;
+  }
 }
 
-// ----------------- Checkout Page -----------------
 export default function CheckoutClient() {
   const params = useSearchParams();
-  const router = useRouter();
 
   const { name, email } = useRegisterStore();
   const { selectedPreview } = useTemplateStore();
@@ -88,7 +29,6 @@ export default function CheckoutClient() {
   const { plans, interval } = usePricingStore();
   const snap = useCheckoutSnapshot();
 
-  // ---- PLAN + TEMPLATE LOGIC ----
   const activeTemplate = snap.templateId || params.get("template") || selectedPreview || "";
   const activePlanId = snap.planId || params.get("plan") || "basic";
   const plan = (plans as PricePlan[]).find((p) => p.id === activePlanId);
@@ -103,13 +43,14 @@ export default function CheckoutClient() {
   const isQuarterly = interval === "quarterly";
   const isMonthly = interval === "monthly";
   const [addDomain, setAddDomain] = useState(isQuarterly ? true : false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isQuarterly) setAddDomain(true);
     else if (isMonthly) setAddDomain(false);
   }, [interval, isQuarterly, isMonthly]);
 
-  let total = snap.total !== null ? snap.total : planPrice;
+  let total = planPrice;
   if (isMonthly && addDomain) total = planPrice + DOMAIN_COST;
   else if (isQuarterly) total = planPrice * 3;
 
@@ -121,36 +62,90 @@ export default function CheckoutClient() {
     }
   }, [params, selectedPreview, activePlanId, setChoice]);
 
-  // ----------------- 👇 VERIFICATION LOGIC -----------------
   useEffect(() => {
-    const paymentReference = params.get("paymentReference");
-    if (!paymentReference) return;
-
-    const verify = async () => {
-      try {
-        const res = await fetch("/api/monnify/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentReference }),
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          router.push("/dashboard"); // ✅ redirect if verified
-        } else {
-          alert("Payment failed or pending");
-        }
-      } catch (err) {
-        alert("Could not verify payment");
-      }
+    const existing = document.querySelector("script[data-monnify-sdk]");
+    if (existing) return;
+    const script = document.createElement("script");
+    script.src = "https://sdk.monnify.com/plugin/monnify.js";
+    script.async = true;
+    script.setAttribute("data-monnify-sdk", "1");
+    document.body.appendChild(script);
+    return () => {
     };
+  }, []);
+const handlePay = async () => {
+  if (!name || !email) {
+    alert("Please enter your details before proceeding with payment");
+    return;
+  }
 
-    verify();
-  }, [params, router]);
-  // ----------------------------------------------------------
+  if (!window.MonnifySDK) {
+    alert("Payment provider not ready. Please try again in a moment.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const amountValue = Math.round(total * 100) / 100; // round to 2dp
+
+    // 🔎 Debug log
+    console.log("Initializing Monnify with:", {
+      amount: amountValue,
+      apiKey: process.env.NEXT_PUBLIC_MONNIFY_API_KEY,
+      contractCode: process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE,
+      customerName: name,
+      customerEmail: email,
+      isTestMode: true,
+    });
+
+    window.MonnifySDK.initialize({
+      amount: amountValue,
+      currency: "NGN",
+      reference: String(Date.now()),
+      customerName: name,
+      customerEmail: email,
+      apiKey: process.env.NEXT_PUBLIC_MONNIFY_API_KEY,
+      contractCode: process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE,
+      paymentDescription: `${plan?.name ?? "Plan"} - ${isQuarterly ? "Quarterly" : "Monthly"}`,
+      isTestMode: true,
+
+      onLoadStart: function () {
+        console.log("✅ Monnify checkout loading…");
+      },
+
+      onComplete: function (response: any) {
+        console.log("🎉 Monnify onComplete:", response);
+
+        const ref = response?.paymentReference || response?.transactionReference;
+        const status = response?.paymentStatus || "SUCCESS";
+
+        if (ref) {
+          window.location.href = `/dashboard?paymentReference=${encodeURIComponent(
+            ref
+          )}&paymentStatus=${encodeURIComponent(status)}`;
+        } else {
+          window.location.href = `/?paymentStatus=SUCCESS`;
+        }
+      },
+
+onClose: function (data: any) {
+  const ref = data?.paymentReference || data?.transactionReference;
+  window.location.href = `/dashboard?paymentStatus=PENDING&paymentReference=${encodeURIComponent(ref || "")}`;
+}
+
+    });
+  } catch (err) {
+    console.error(" Payment initiation failed:", err);
+    alert("Could not start payment. Try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 flex flex-col">
+    <div className="min-h-screen w-full bg-gray-50 flex flex-col pb-32">
       <div className="flex-1 max-w-6xl mx-auto px-4 py-8 lg:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
           {/* Left */}
@@ -160,6 +155,8 @@ export default function CheckoutClient() {
                 <div className="mb-6 lg:mb-0 items-center">
                   <div className="relative w-full h-32 rounded-lg ">
                     {selectedPreview ? (
+                      // use next/image later if desired
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={selectedPreview} alt="template" className="w-fit h-fit object-cover " />
                     ) : (
                       <div className="w-full h-full bg-gray-100 grid place-items-center text-xs text-gray-400">
@@ -184,11 +181,16 @@ export default function CheckoutClient() {
               <p className="text-sm text-gray-500 mb-2">Plan</p>
               <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
                 <div>
-                  <p className="text-sm text-gray-500">Billed {interval === "quarterly" ? "quarterly" : interval}</p>
+                  <p className="text-sm text-gray-500">Billed {isQuarterly ? "quarterly" : interval}</p>
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-semibold text-gray-900">{naira(planPrice)}</div>
-                  {isQuarterly && <div className="text-sm text-gray-500">* 3</div>}
+                  {isQuarterly && (
+                    <>
+                      <div className="text-sm text-gray-500">* 3</div>
+                      <div className="text-sm text-gray-400 line-through mt-1">{naira(plan?.monthly ?? 0)}</div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -255,14 +257,14 @@ export default function CheckoutClient() {
                 </div>
               )}
 
-              <PayButton
-                amount={total}
-                planId={activePlanId}
-                name={name}
-                email={email}
-                templateId={activeTemplate}
-                templatePreview={selectedPreview}
-              />
+              <Button
+                onClick={handlePay}
+                disabled={loading}
+                className="w-full h-12 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium transition disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `Pay ${naira(total)}`}
+              </Button>
+
               <p className="text-xs text-gray-400 text-center mt-3">Secure checkout • Instant activation</p>
             </div>
           </aside>

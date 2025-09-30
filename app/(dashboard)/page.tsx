@@ -29,7 +29,6 @@ export default function HomePage() {
             </h1>
             <p className="mt-4 text-lg text-[#7D141D]/80">
    A polished digital presence proves your skills and credibility at first glance.            </p>
-
             <Button
               size="lg"
               className="mt-8 rounded-full bg-[#7D141D] text-white hover:bg-[#FF1E27]"
@@ -51,7 +50,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FEATURES */}
+      {/* BENEFITS */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-3 gap-8">
           <div className="bg-white p-6 rounded-2xl shadow">

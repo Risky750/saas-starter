@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing email' }, { status: 400 });
     }
 
-    const POSTGRES_URL = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
+  {/*  const POSTGRES_URL = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
     if (!POSTGRES_URL) {
       return NextResponse.json({ error: 'Database URL not configured' }, { status: 500 });
     }
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
       INSERT INTO customer_care (contact_id, subject, message, template_id)
       VALUES (${contactId}, ${subject ?? null}, ${message ?? null}, ${templateId ?? null})
     `;
-
+  */}
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err: any) {
     console.error('CustomerCare API error:', err);

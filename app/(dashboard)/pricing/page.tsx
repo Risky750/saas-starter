@@ -25,8 +25,11 @@ export default function PriceCards() {
       monthly: 3500,
   quarterly: 3166.66,
   features: [
-    "professional Email",
-    "Secured Website",
+    "1 page personal portfolio",
+    "custom colors & branding",
+    "social media integration",
+    "free consultation & setup guide",
+    "free domain",
   ],
       popular: false,
       cta: "Get Started",
@@ -37,11 +40,14 @@ export default function PriceCards() {
       monthly: 5000,
       quarterly: 4666.66,
       features: [
-        "Free professional email",
-        "Secured Website",
-        "payment services intergration"
+        "1 page personal portfolio",
+    "custom colors & branding",
+    "social media integration",
+    "free consultation & setup guide",
+    "custom email setup",
+    "free domain"
       ],
-      popular: true,
+      popular: false,
       cta: "Get Started",
     },
   ];
@@ -75,10 +81,10 @@ export default function PriceCards() {
 <div className="place-items-center mt-10 mb-10">
           <div className="flex items-center gap-3 text-[#7D141D]">
             <span
-              className={
-                interval === "quarterly"
-                  ? "font-semibold"
-                  : "text-sm text-[#7D141D]/60"
+            className={
+             interval === "quarterly"
+              ? "font-semibold"
+              : "text-sm text-[#7D141D]/60"
               }
             >
               Quarterly
@@ -88,7 +94,6 @@ export default function PriceCards() {
               <Input
                 type="checkbox"
                 className="sr-only peer"
-                checked={interval === "monthly"}
                 onChange={(e) =>
                   setInterval(e.target.checked ? "monthly" : "quarterly")
                 }
@@ -120,7 +125,7 @@ export default function PriceCards() {
               <h3 className="text-xl font-bold text-[#7D141D]">{plan.name}</h3>
 
               <div className="mt-1 mb-4">
-                <div className="flex flex-col items-start">
+                <div className="flex flex-col ">
                   <div className="flex items-baseline gap-2">
                     <span className="text-2xl font-bold">
                       ₦{currentPrice(plan).toLocaleString()}
@@ -137,9 +142,6 @@ export default function PriceCards() {
 
               <ul className="mb-6 space-y-2 text-sm text-[#7D141D]/80">
                 {plan.features.map((feature) => {
-                  if (feature.includes("Free Domain") && interval === "monthly") {
-                    return null;
-                  }
                   return (
                     <li key={feature} className="flex items-center gap-2">
                       <span className="text-[#FF1E27]">✓</span> {feature}
