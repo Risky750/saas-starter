@@ -13,7 +13,6 @@ export default function TemplatesPage() {
 
     const templates: Template[] = [];
 
-    // 1. sub-dirs = templates
     fs.readdirSync(dir, { withFileTypes: true })
       .filter((d) => d.isDirectory())
       .forEach((d) => {
@@ -29,7 +28,6 @@ export default function TemplatesPage() {
         });
       });
 
-    // 2. loose files = one-shot templates
     fs.readdirSync(dir)
       .filter((f) => /.(png|jpe?g|webp|gif)$/i.test(f))
       .forEach((file) => {

@@ -6,6 +6,7 @@ import { XIcon, ChevronRight } from "lucide-react";
 import { useTemplateStore } from "@/stores/templateStore";
 import type { Template } from "types/templates";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export default function TemplatesClient({
   templatesByCategory,
@@ -101,7 +102,7 @@ export default function TemplatesClient({
               className="group relative bg-white rounded-2xl shadow hover:shadow-lg transition"
             >
               {t.images?.[0] ? (
-                <img
+                <Image
                   src={t.images[0]}
                   alt={t.title}
                   className="w-full h-52 object-cover rounded-t-2xl"
@@ -136,7 +137,7 @@ export default function TemplatesClient({
               {/* main image */}
               <div className="relative bg-black grid place-content-center">
                 <div className={`mx-auto ${actualSize ? "overflow-auto" : ""}`}>
-                  <img
+                  <Image
                     src={active.images?.[0] || ""}
                     alt={active.title}
                     className={`block ${actualSize ? "" : "max-w-full max-h-[70vh] object-contain"}`}
