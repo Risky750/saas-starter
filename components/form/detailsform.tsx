@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { useRegisterStore } from "@/app/stores/registerStores";
+import { useRegisterStore } from "@/stores/registerStores";
 
 export default function Register() {
   const { name, email, setField } = useRegisterStore();

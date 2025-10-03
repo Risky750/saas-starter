@@ -4,10 +4,10 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Register from "@/components/form/detailsform";
-import { useRegisterStore } from "@/app/stores/registerStores";
-import { useCheckoutStore, useCheckoutSnapshot } from "@/app/stores/checkoutStore";
-import { useTemplateStore } from "@/app/stores/templateStore";
-import { usePricingStore } from "@/app/stores/pricingStore";
+import { useRegisterStore } from "@/stores/registerStores";
+import { useCheckoutStore, useCheckoutSnapshot } from "@/stores/checkoutStore";
+import { useTemplateStore } from "@/stores/templateStore";
+import { usePricingStore } from "@/stores/pricingStore";
 import type { Plan as PricePlan } from "@/types/pricing";
 import { Check, Loader2 } from "lucide-react";
 
@@ -87,9 +87,8 @@ const handlePay = async () => {
   setLoading(true);
 
   try {
-    const amountValue = Math.round(total * 100) / 100; // round to 2dp
+    const amountValue = Math.round(total * 100) / 100; 
 
-    // 🔎 Debug log
     console.log("Initializing Monnify with:", {
       amount: amountValue,
       apiKey: process.env.NEXT_PUBLIC_MONNIFY_API_KEY,
@@ -155,8 +154,6 @@ onClose: function (data: any) {
                 <div className="mb-6 lg:mb-0 items-center">
                   <div className="relative w-full h-32 rounded-lg ">
                     {selectedPreview ? (
-                      // use next/image later if desired
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={selectedPreview} alt="template" className="w-fit h-fit object-cover " />
                     ) : (
                       <div className="w-full h-full bg-gray-100 grid place-items-center text-xs text-gray-400">

@@ -1,5 +1,4 @@
-'use client';import Link from 'next/link';
-
+'use client';
 
 
 export default function Layout({ children }: { children: React.ReactNode }) {

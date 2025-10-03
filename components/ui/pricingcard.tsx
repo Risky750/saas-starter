@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { usePlanStore } from '../../app/stores/planStores';
+import { usePlanStore } from '../../stores/planStores';
 
 export default function PriceCards() {
   const naira = '\u20A6';
