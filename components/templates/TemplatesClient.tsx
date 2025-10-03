@@ -163,7 +163,7 @@ export default function TemplatesClient({
                         src === active.images?.[0] ? "border-[#FF1E27]" : "border-transparent"
                       }`}
                     >
-                      <img src={src} alt="" className="h-16 w-28 object-cover" />
+                      <Image src={src} alt="" className="h-16 w-28 object-cover" />
                     </Button>
                   ))}
                 </div>
