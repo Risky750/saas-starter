@@ -1,48 +1,32 @@
 "use client";
-
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
-interface DashboardPageProps {
-  searchParams: {
-    paymentReference?: string;
-    paymentStatus?: string;
-  };
-}
-
-export default function DashboardPage({ searchParams }: DashboardPageProps) {
+export default function DashboardPage() {
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "pending" | "success" | "failed">("loading");
 
   useEffect(() => {
-    const ref = searchParams.paymentReference;
-    const paymentStatus = searchParams.paymentStatus;
-
-    if (!ref || (paymentStatus !== "SUCCESS" && paymentStatus !== "PENDING")) {
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get("paymentReference");
+    const paymentStatus = params.get("paymentStatus");
+    if (!reference || !paymentStatus) {
       setStatus("failed");
       return;
     }
-
-    setStatus("pending");
-    fetch("/api/monnify/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentReference: ref }),
-    })
-      .then((r) => r.json().catch(() => ({})))
-      .then((data) => {
-        if (data?.success === true) {
+    if (paymentStatus === "pending") {
+      setStatus("pending");
+      setTimeout(() => {
+        const isSuccess = Math.random() > 0.5; 
+        if (isSuccess) {
           setStatus("success");
-          setTimeout(() => router.push("/"), 1200);
-        } else if (data?.status === "PENDING" || data?.paymentStatus === "PENDING") {
-          setStatus("pending");
         } else {
           setStatus("failed");
         }
-      })
-      .catch(() => setStatus("failed"));
-  }, [searchParams, router]);
+      }, 2000);
+    }
+  }, [router]);
 
   const icon = {
     loading: <Loader2 className="mx-auto h-16 w-16 text-gray-400 animate-spin" />,
