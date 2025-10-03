@@ -1,10 +1,11 @@
+// app/(dashboard)/dashboard/DashboardPageClient.tsx (client)
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
-export default function DashboardPage() {
+export default function DashboardPageClient() {
   const params = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "pending" | "success" | "failed">("loading");
