@@ -112,98 +112,98 @@ export default function PricingPage() {
   }
 
   return (
-    <section className="h-screen bg-[#f5f2f0] w-full flex justify-center items-start px-4 py-8">
-      <div className="w-full max-w-7xl flex flex-col md:flex-row gap-6 items-start">
-        {/* Left: Template Preview */}
-        {selectedPreview && (
-          <div className="md:w-3/5 flex flex-col gap-4 items-center mt-10">
-            <div className="relative w-full max-w-[650px] aspect-[16/10] rounded-xl border border-[#e0d7d1] bg-white shadow-md overflow-visible hover:shadow-lg transition-shadow">
-              <Image
-                src={selectedPreview}
-                alt="Selected template preview"
-                width={650}
-                height={400}
-                className="h-full w-full object-cover"
-              />
-            </div>
-
-            <Button
-              onClick={() => router.push(`/templates/${selectedId}`)}
-              className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"
-            >
-              Live Preview
-            </Button>
-          </div>
-        )}
-
-        {/* Right: Pricing */}
-        <div className="md:w-2/5 flex flex-col gap-4">
-          {/* Interval toggle */}
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-full bg-white shadow-sm border border-[#e0d7d1]">
-            {(["quarterly", "monthly"] as const).map((val) => (
-              <button
-                key={val}
-                onClick={() => setInterval(val)}
-                className={`px-3 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
-                  interval === val
-                    ? "bg-[#b23b44] text-white shadow-md"
-                    : "text-[#6e5659] hover:bg-[#f0dcdc]"
-                }`}
-              >
-                {val === "quarterly" ? "Quarterly" : "Monthly"}
-              </button>
-            ))}
-          </div>
-
-          {/* Pricing cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4 items-center">
-            {filteredPlans.map((plan) => {
-              const price = Math.round(currentPrice(plan));
-              const isQuarterly = interval === "quarterly";
-              const isBestValue = plan.name.toLowerCase().includes("premium");
-
-              return (
-                <Card
-                  key={plan.id}
-                  className={`relative p-6 rounded-2xl border border-transparent shadow-md hover:shadow-lg transition-transform duration-200 transform hover:-translate-y-1 flex flex-col ${
-                    isBestValue ? "ring-2 ring-[#b23b44]/20" : ""
-                  }`}
-                >
-                  <h3 className="text-xl font-bold text-[#2c1013] mb-3">{plan.name}</h3>
-
-                  <div className="mb-4 flex flex-col">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-extrabold text-[#b23b44]">₦{price.toLocaleString()}</span>
-                      <span className="text-sm text-[#6e5659]">/month</span>
-                    </div>
-                    {isQuarterly && (
-                      <span className="text-xl text-slate-900 line-through mt-1">
-                        ₦{Math.round(plan.monthly).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-
-                  <ul className="flex-1 space-y-2 text-sm text-[#6e5659] mb-5">
-                    {visibleFeatures(plan).map((f) => (
-                      <li key={f} className="flex items-center gap-2">
-                        <Check className="w-5 h-5 text-[#b23b44]" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button
-                    onClick={() => selectPlan(plan)}
-                    className="w-full py-3 rounded-full bg-[#b23b44] text-white font-bold shadow-sm hover:shadow-md transform hover:scale-105 transition-all duration-200"
-                  >
-                    Get Started
-                  </Button>
-                </Card>
-              );
-            })}
-          </div>
+    <section className="bg-[#f5f2f0] w-full flex justify-center items-start px-4 py-8">
+  <div className="w-full max-w-7xl flex flex-col md:flex-row gap-6 items-center md:items-start">
+    {/* Left: Template Preview */}
+    {selectedPreview && (
+      <div className="w-full md:w-3/5 flex flex-col gap-4 items-center mt-10">
+        <div className="relative w-full max-w-[650px] aspect-[16/10] rounded-xl border border-[#e0d7d1] bg-white shadow-md overflow-visible hover:shadow-lg transition-shadow">
+          <Image
+            src={selectedPreview}
+            alt="Selected template preview"
+            width={650}
+            height={400}
+            className="h-full w-full object-cover"
+          />
         </div>
+
+        <Button
+          onClick={() => router.push(`/templates/${selectedId}`)}
+          className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"
+        >
+          Live Preview
+        </Button>
       </div>
-    </section>
+    )}
+
+    {/* Right: Pricing */}
+    <div className="w-full md:w-2/5 flex flex-col gap-4 items-center">
+      {/* Interval toggle */}
+      <div className="grid grid-cols-2 gap-2 p-1 rounded-full bg-white shadow-sm border border-[#e0d7d1]">
+        {(["quarterly", "monthly"] as const).map((val) => (
+          <button
+            key={val}
+            onClick={() => setInterval(val)}
+            className={`px-3 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+              interval === val
+                ? "bg-[#b23b44] text-white shadow-md"
+                : "text-[#6e5659] hover:bg-[#f0dcdc]"
+            }`}
+          >
+            {val === "quarterly" ? "Quarterly" : "Monthly"}
+          </button>
+        ))}
+      </div>
+
+      {/* Pricing cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4 items-center justify-center">
+        {filteredPlans.map((plan) => {
+          const price = Math.round(currentPrice(plan));
+          const isQuarterly = interval === "quarterly";
+          const isBestValue = plan.name.toLowerCase().includes("premium");
+
+          return (
+            <Card
+              key={plan.id}
+              className={`relative p-6 rounded-2xl border border-transparent shadow-md hover:shadow-lg transition-transform duration-200 transform hover:-translate-y-1 flex flex-col ${
+                isBestValue ? "ring-2 ring-[#b23b44]/20" : ""
+              }`}
+            >
+              <h3 className="text-xl font-bold text-[#2c1013] mb-3 text-center">{plan.name}</h3>
+
+              <div className="mb-4 flex flex-col items-center">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold text-[#b23b44]">₦{price.toLocaleString()}</span>
+                  <span className="text-sm text-[#6e5659]">/month</span>
+                </div>
+                {isQuarterly && (
+                  <span className="text-xl text-slate-900 line-through mt-1">
+                    ₦{Math.round(plan.monthly).toLocaleString()}
+                  </span>
+                )}
+              </div>
+
+              <ul className="flex-1 space-y-2 text-sm text-[#6e5659] mb-5">
+                {visibleFeatures(plan).map((f) => (
+                  <li key={f} className="flex items-center gap-2">
+                    <Check className="w-5 h-5 text-[#b23b44]" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                onClick={() => selectPlan(plan)}
+                className="w-full py-3 rounded-full bg-[#b23b44] text-white font-bold shadow-sm hover:shadow-md transform hover:scale-105 transition-all duration-200"
+              >
+                Get Started
+              </Button>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+</section>
   );
 }
