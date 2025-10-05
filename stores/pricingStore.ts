@@ -1,21 +1,22 @@
+"use client";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { Plan, Interval } from "@/types/pricing";
 
 type PricingState = {
-  plans: Plan[];          
-  interval: Interval;
+  plans: Plan[];
+  interval: Interval; // "monthly" | "quarterly"
   planId: string | null;
-  setPlans: (list: Plan[]) => void;
-  setInterval: (i: Interval) => void;
-  setPlanId: (id: string | null) => void;
+  setPlans: (plans: Plan[]) => void;
+  setInterval: (interval: Interval) => void;
+  setPlanId: (planId: string | null) => void;
 };
 
 export const usePricingStore = create<PricingState>()(
   persist(
     (set) => ({
       plans: [],
-      interval: "quarterly",
+      interval: "monthly", // default
       planId: null,
       setPlans: (plans) => set({ plans }),
       setInterval: (interval) => set({ interval }),
@@ -23,7 +24,12 @@ export const usePricingStore = create<PricingState>()(
     }),
     {
       name: "pricing-storage",
-      partialize: ({ interval, planId }) => ({ interval, planId }), // only these survive reload
+      storage: createJSONStorage(() => localStorage),
+      // Only persist these keys, not everything (fixes the type issues you had earlier)
+      partialize: (state) => ({
+        interval: state.interval,
+        planId: state.planId,
+      }),
     }
   )
 );

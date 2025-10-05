@@ -4,40 +4,64 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { useTemplateStore } from "./templateStore";
 import { usePricingStore } from "./pricingStore";
 
+type Interval = "monthly" | "quarterly";
+
 type CheckoutState = {
-  setChoice: (templateId: string, planId: string, interval?: "monthly" | "quarterly") => void;
-  total: number | null;
-  setTotal: (n: number | null) => void;
+  templateId: string;
+  planId: string;
+  interval: Interval;
   domainAdded: boolean;
+  total: number | null;
+
+  // Actions
+  setChoice: (templateId: string, planId: string, interval?: Interval) => void;
+  setInterval: (interval: Interval) => void;
   setDomainAdded: (v: boolean) => void;
+  setTotal: (n: number | null) => void;
 };
 
 export const useCheckoutStore = create<CheckoutState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
+      templateId: "",
+      planId: "",
+      interval: "monthly",
+      domainAdded: false,
+      total: null,
+
       setChoice: (templateId, planId, interval) => {
         useTemplateStore.getState().setSelectedId(templateId);
         usePricingStore.getState().setPlanId(planId);
 
         set({
-          domainAdded: interval === "quarterly",
+          templateId,
+          planId,
+          interval: interval || "monthly",
+          domainAdded: interval === "quarterly", // quarterly gets domain by default
         });
       },
-      total: null,
-      setTotal: (n) => set({ total: n }),
-      domainAdded: false,
+
+      setInterval: (interval) => {
+        set({ interval });
+        // Optional: auto-add domain for quarterly
+        if (interval === "quarterly") set({ domainAdded: true });
+      },
+
       setDomainAdded: (v) => set({ domainAdded: v }),
+      setTotal: (n) => set({ total: n }),
     }),
     {
-      name: "checkout-storage",
-      storage: createJSONStorage(() => localStorage), // ✅ correct for Zustand v4
+      name: "checkout-storage", // localStorage key
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
 
+// Snapshot hook for easy access
 export const useCheckoutSnapshot = () => ({
-  templateId: useTemplateStore((s) => s.selectedId) ?? "",
-  planId: usePricingStore((s) => s.planId) ?? "",
-  total: useCheckoutStore((s) => s.total) ?? null,
-  domainAdded: useCheckoutStore((s) => s.domainAdded) ?? false,
+  templateId: useCheckoutStore((s) => s.templateId),
+  planId: useCheckoutStore((s) => s.planId),
+  interval: useCheckoutStore((s) => s.interval),
+  domainAdded: useCheckoutStore((s) => s.domainAdded),
+  total: useCheckoutStore((s) => s.total),
 });

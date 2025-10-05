@@ -1,10 +1,12 @@
 import { create } from "zustand";
-import { TemplateStore } from "types/templates";
+import type { TemplateId, TemplateStore } from "@/types/templates";
 
-// Plain, non-persistent store
 export const useTemplateStore = create<TemplateStore>((set) => ({
   selectedId: null,
   selectedPreview: null,
-  setSelectedId: (id) => set({ selectedId: id }),
-  setSelectedPreview: (url) => set({ selectedPreview: url }),
+  category: "website",
+
+  setSelectedId: (id: TemplateId | null) => set({ selectedId: id }),
+  setSelectedPreview: (url: string | null) => set({ selectedPreview: url }),
+  setCategory: (category: "website" | "portfolio") => set({ category }),
 }));
