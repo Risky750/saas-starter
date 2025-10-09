@@ -10,6 +10,7 @@ type PricingState = {
   setPlans: (plans: Plan[]) => void;
   setInterval: (interval: Interval) => void;
   setPlanId: (planId: string | null) => void;
+  clear?: () => void;
 };
 
 export const usePricingStore = create<PricingState>()(
@@ -21,6 +22,8 @@ export const usePricingStore = create<PricingState>()(
       setPlans: (plans) => set({ plans }),
       setInterval: (interval) => set({ interval }),
       setPlanId: (planId) => set({ planId }),
+      // Clear persisted pricing state
+      clear: () => set({ interval: 'monthly', planId: null }),
     }),
     {
       name: "pricing-storage",
@@ -33,3 +36,5 @@ export const usePricingStore = create<PricingState>()(
     }
   )
 );
+
+export type UsePricingStoreType = typeof usePricingStore;

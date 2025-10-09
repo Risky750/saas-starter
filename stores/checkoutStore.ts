@@ -18,6 +18,7 @@ type CheckoutState = {
   setInterval: (interval: Interval) => void;
   setDomainAdded: (v: boolean) => void;
   setTotal: (n: number | null) => void;
+  clear: () => void;
 };
 
 export const useCheckoutStore = create<CheckoutState>()(
@@ -49,6 +50,8 @@ export const useCheckoutStore = create<CheckoutState>()(
 
       setDomainAdded: (v) => set({ domainAdded: v }),
       setTotal: (n) => set({ total: n }),
+      // clear persisted checkout state
+      clear: () => set({ templateId: '', planId: '', interval: 'monthly', domainAdded: false, total: null }),
     }),
     {
       name: "checkout-storage", // localStorage key

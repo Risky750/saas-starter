@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -64,9 +64,7 @@ export default function CheckoutClient() {
     }
   }, []);
 
-  // Initialize store on mount (survive refresh)
   useEffect(() => {
-    // Keep quarterly plans always adding domain
     if (isQuarterly) setDomainAdded(true);
     if (isMonthly && snap.domainAdded !== undefined) setDomainAdded(snap.domainAdded);
 
@@ -78,6 +76,13 @@ export default function CheckoutClient() {
 
     setTotal(totalAmount);
   }, [params, selectedPreview, activePlanId, interval, setChoice, setTotal, setDomainAdded, snap.domainAdded]);
+
+  const paymentCompletedRef = useRef(false);
+
+  const sanitizeEnv = (v?: string) => {
+    if (!v) return "";
+    return v.replace(/^\s*"(.*)"\s*$/, "$1");
+  };
 
   const handlePay = () => {
     if (!name || !email) {
@@ -92,32 +97,60 @@ export default function CheckoutClient() {
 
     setLoading(true);
 
+    // ensure amount is a whole number and at least 1 (avoid tiny/zero amounts)
+    const amountToPay = (totalAmount || 0);
+
+    const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
+    const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
+    const baseUrl = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_BASE_URL as any);
+
+    if (!apiKey || !contractCode) {
+      console.warn("Monnify API key or contract code missing. Check environment variables.");
+    }
+
     window.MonnifySDK.initialize({
-      amount: Math.ceil(totalAmount),
+      amount: amountToPay,
       currency: "NGN",
       customerFullName: name,
       customerEmail: email,
-      apiKey: process.env.NEXT_PUBLIC_MONNIFY_API_KEY,
-      contractCode: process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE,
+      apiKey,
+      contractCode,
+      baseUrl: baseUrl || undefined,
       paymentDescription: `${selectedPlan?.name ?? "Plan"} - ${isQuarterly ? "Quarterly" : "Monthly"}`,
       metadata: {
         planId: selectedPlan?.id,
         interval,
         domainAdded,
       },
-      onLoadStart: () => console.log("Monnify loading started"),
-      onLoadComplete: () => console.log("Monnify SDK ready"),
+  onLoadStart: () => {},
+  onLoadComplete: () => {},
       onComplete: (res: any) => {
-        console.log("✅ Payment complete:", res);
+        console.info("Payment complete", res);
+        paymentCompletedRef.current = true;
+        try {
+          useRegisterStore.getState().clear?.();
+        } catch (e) {}
+        try {
+          useCheckoutStore.getState().clear?.();
+        } catch (e) {}
+        try {
+          useTemplateStore.getState().clear?.();
+        } catch (e) {}
+        try {
+          (usePricingStore as any).getState().clear?.();
+        } catch (e) {}
+
+        setLoading(false);
         window.location.href = `/`;
       },
       onClose: (res: any) => {
-        console.log("⚠️ Payment closed:", res);
-        window.location.href = `/checkout`;
+        console.info("Payment closed", res);
+        if (!paymentCompletedRef.current) {
+          setLoading(false);
+          window.location.href = "/checkout";
+        }
       },
     });
-
-    setLoading(false);
   };
 
   return (

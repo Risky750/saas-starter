@@ -89,27 +89,13 @@ export default function PricingPage() {
 
   const currentPrice = (plan: Plan) => (interval === "monthly" ? plan.monthly : plan.quarterly);
 
-  const visibleFeatures = (plan: Plan) =>
-    interval === "monthly"
-      ? plan.features.filter(f => f.toLowerCase() !== "free domain")
-      : plan.features;
-
-  if (!selectedId) {
+  const visibleFeatures = (plan: Plan) => {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[#f5f2f0] text-[#2c1013] px-4">
-        <h2 className="text-2xl font-bold mb-4">No template selected</h2>
-        <p className="text-center mb-6 text-sm text-[#6e5659]">
-          Pick a template before choosing a plan.
-        </p>
-        <Button
-          onClick={() => router.push("/templates")}
-          className="px-6 py-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition"
-        >
-          Pick a Template
-        </Button>
-      </div>
+      interval === "monthly"
+        ? plan.features.filter(f => f.toLowerCase() !== "free domain")
+        : plan.features
     );
-  }
+  };
 
   return (
     <section className="bg-[#f5f2f0] w-full flex justify-center items-start px-4 py-8">
