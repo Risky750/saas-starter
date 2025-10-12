@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Glasses, Handshake, Globe, ArrowRight } from "lucide-react";
+import { Glasses, Handshake, Globe, ArrowRight,MessageCircle } from "lucide-react";
 import Testimonials from "@/components/dashboard/Testimonials";
 
 export default function HomePage() {
@@ -90,6 +90,13 @@ export default function HomePage() {
           © {new Date().getFullYear()} CraftmyWeb.Ng – All rights reserved.
         </div>
       </footer>
+<a
+  href="https://wa.me/2348012345678"
+  className="fixed bottom-6 right-6 bg-[#25D366] text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform z-50"
+>
+  <MessageCircle className="h-6 w-6" />
+</a>
+
     </main>
   );
 }

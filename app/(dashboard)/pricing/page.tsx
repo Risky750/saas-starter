@@ -10,53 +10,8 @@ import { useCheckoutStore } from "@/stores/checkoutStore";
 import { usePricingStore } from "@/stores/pricingStore";
 import type { Plan } from "@/types/pricing";
 import { Check } from "lucide-react";
+import { defaultPlans } from "@/lib/defaultPlans";
 
-// Default plans
-const defaultPlans: Plan[] = [
-  {
-    id: "1",
-    name: "Standard",
-    monthly: 3500,
-    quarterly: 3166.66,
-    features: [
-      "1-page personal portfolio",
-      "Custom colours & branding",
-      "Social-media integration",
-      "Free consultation & setup guide",
-      "Free domain",
-    ],
-  },
-  {
-    id: "2",
-    name: "Premium",
-    monthly: 5000,
-    quarterly: 4666.66,
-    features: [
-      "1-page personal portfolio",
-      "Custom colours & branding",
-      "Social-media integration",
-      "Free consultation & setup guide",
-      "Custom e-mail setup",
-      "Free domain",
-    ],
-  },
-  {
-    id: "3",
-    name: "Enterprise",
-    monthly: 10000,
-    quarterly: 9666.66,
-    features: [
-      "1-page personal portfolio",
-      "Custom colours & branding",
-      "Social-media integration",
-      "Free consultation & setup guide",
-      "Custom e-mail setup",
-      "Free domain",
-      "E-mail hosting",
-      "SEO optimisation",
-    ],
-  },
-];
 
 export default function PricingPage() {
   const router = useRouter();
@@ -64,18 +19,31 @@ export default function PricingPage() {
   const { setChoice, setTotal } = useCheckoutStore();
   const { plans: storedPlans, setPlans, interval, setInterval } = usePricingStore();
 
-  // Initialize plans if empty
+
   useEffect(() => {
     if (storedPlans.length === 0) setPlans(defaultPlans);
   }, [storedPlans.length, setPlans]);
 
-  // Filter plans by category
   const filteredPlans = useMemo(() => {
     if (!storedPlans.length) return [];
-    if (category === "website") return storedPlans.filter(p => ["Premium", "Enterprise"].includes(p.name));
-    if (category === "portfolio") return storedPlans.filter(p => ["Standard", "Premium"].includes(p.name));
-    return storedPlans;
-  }, [category, storedPlans]);
+    let list = storedPlans;
+    if (category === "website") list = storedPlans.filter(p => ["Enterprise", "Premium"].includes(p.name));
+    else if (category === "portfolio") list = storedPlans.filter(p => ["Premium", "Standard"].includes(p.name));
+
+    const byPriceDesc = (a: Plan, b: Plan) => {
+      const aPrice = interval === "quarterly" ? (a.quarterly ?? a.monthly) : a.monthly;
+      const bPrice = interval === "quarterly" ? (b.quarterly ?? b.monthly) : b.monthly;
+      return bPrice - aPrice;
+    };
+
+    return [...list].sort(byPriceDesc);
+  }, [category, storedPlans, interval]);
+
+  const maxPrice = useMemo(() => {
+    if (!filteredPlans.length) return 0;
+    const prices = filteredPlans.map(p => interval === "quarterly" ? (p.quarterly ?? p.monthly) : p.monthly);
+    return Math.max(...prices, 0);
+  }, [filteredPlans, interval]);
 
   const selectPlan = (plan: Plan) => {
     if (!selectedId) return;
@@ -114,10 +82,19 @@ export default function PricingPage() {
         </div>
 
         <Button
-          onClick={() => router.push(`/templates/${selectedId}`)}
+          onClick={() => {
+            if (!selectedId) {
+              alert("Select a template first to preview it.");
+              return;
+            }
+            const parts = selectedId.split("/").map(encodeURIComponent).join("/");
+            const baseRaw = (process.env.NEXT_PUBLIC_TEMPLATES_BASE_URL || "").replace(/\/$/, "");
+            const url = baseRaw ? `${baseRaw}/${parts}` : `/demo/${parts}`;
+            window.open(url);
+          }}
           className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"
         >
-          Live Preview
+          Live Demo
         </Button>
       </div>
     )}
@@ -146,7 +123,8 @@ export default function PricingPage() {
         {filteredPlans.map((plan) => {
           const price = Math.round(currentPrice(plan));
           const isQuarterly = interval === "quarterly";
-          const isBestValue = plan.name.toLowerCase().includes("premium");
+          const planPrice = interval === "quarterly" ? (plan.quarterly ?? plan.monthly) : plan.monthly;
+          const isBestValue = planPrice === maxPrice;
 
           return (
             <Card

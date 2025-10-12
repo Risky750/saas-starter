@@ -38,23 +38,21 @@ export const useCheckoutStore = create<CheckoutState>()(
           templateId,
           planId,
           interval: interval || "monthly",
-          domainAdded: interval === "quarterly", // quarterly gets domain by default
+          domainAdded: interval === "quarterly",
         });
       },
 
       setInterval: (interval) => {
         set({ interval });
-        // Optional: auto-add domain for quarterly
         if (interval === "quarterly") set({ domainAdded: true });
       },
 
       setDomainAdded: (v) => set({ domainAdded: v }),
       setTotal: (n) => set({ total: n }),
-      // clear persisted checkout state
       clear: () => set({ templateId: '', planId: '', interval: 'monthly', domainAdded: false, total: null }),
     }),
     {
-      name: "checkout-storage", // localStorage key
+      name: "checkout-storage",
       storage: createJSONStorage(() => localStorage),
     }
   )

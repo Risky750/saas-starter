@@ -45,6 +45,7 @@ export default function CheckoutClient() {
 
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
+  const [scriptError, setScriptError] = useState(false);
 
   // Calculate total
   const subtotal = isQuarterly ? planPrice * 3 : planPrice;
@@ -56,13 +57,30 @@ export default function CheckoutClient() {
       const script = document.createElement("script");
       script.src = "https://sdk.monnify.com/plugin/monnify.js";
       script.async = true;
-      script.onload = () => setSdkReady(true);
-      script.onerror = () => console.error("❌ Failed to load Monnify SDK");
+      script.onload = () => {
+        setSdkReady(true);
+        setScriptError(false);
+      };
+      script.onerror = (e) => {
+        console.error("❌ Failed to load Monnify SDK", e);
+        setScriptError(true);
+        setSdkReady(false);
+      };
       document.body.appendChild(script);
     } else {
       setSdkReady(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!plans || (Array.isArray(plans) && plans.length === 0)) {
+      import("@/lib/defaultPlans").then((m) => {
+        const defs = m.defaultPlans as PricePlan[];
+        (usePricingStore as any).getState().setPlans(defs);
+      }).catch(() => {
+      });
+    }
+  }, [plans]);
 
   useEffect(() => {
     if (isQuarterly) setDomainAdded(true);
@@ -74,7 +92,9 @@ export default function CheckoutClient() {
       setChoice(template || selectedPreview || "", plan || activePlanId, interval as "monthly" | "quarterly");
     }
 
-    setTotal(totalAmount);
+    if (snap.total === null || snap.total === undefined) {
+      setTotal(totalAmount);
+    }
   }, [params, selectedPreview, activePlanId, interval, setChoice, setTotal, setDomainAdded, snap.domainAdded]);
 
   const paymentCompletedRef = useRef(false);
@@ -91,66 +111,85 @@ export default function CheckoutClient() {
     }
 
     if (!sdkReady || !window.MonnifySDK) {
-      alert("Payment system not ready yet!");
+      const msg = scriptError
+        ? "Payment SDK failed to load. Check your network or browser console for errors."
+        : "Payment system not ready yet. Try again in a moment.";
+      alert(msg);
       return;
     }
 
     setLoading(true);
 
-    // ensure amount is a whole number and at least 1 (avoid tiny/zero amounts)
-    const amountToPay = (totalAmount || 0);
+    // use persisted total when available so refresh doesn't change the amount
+      const storedTotal = snap.total;
+      const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
+      const amountToPay = Math.max(1, Number((displayTotal || 0).toFixed(2)));
 
     const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
     const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
     const baseUrl = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_BASE_URL as any);
 
     if (!apiKey || !contractCode) {
-      console.warn("Monnify API key or contract code missing. Check environment variables.");
+      setLoading(false);
+      alert(
+        "Payment configuration missing. Please contact support (MONNIFY API key or contract code not set)."
+      );
+      return;
     }
 
-    window.MonnifySDK.initialize({
-      amount: amountToPay,
-      currency: "NGN",
-      customerFullName: name,
-      customerEmail: email,
-      apiKey,
-      contractCode,
-      baseUrl: baseUrl || undefined,
-      paymentDescription: `${selectedPlan?.name ?? "Plan"} - ${isQuarterly ? "Quarterly" : "Monthly"}`,
-      metadata: {
-        planId: selectedPlan?.id,
-        interval,
-        domainAdded,
-      },
-  onLoadStart: () => {},
-  onLoadComplete: () => {},
-      onComplete: (res: any) => {
-        console.info("Payment complete", res);
-        paymentCompletedRef.current = true;
-        try {
-          useRegisterStore.getState().clear?.();
-        } catch (e) {}
-        try {
-          useCheckoutStore.getState().clear?.();
-        } catch (e) {}
-        try {
-          useTemplateStore.getState().clear?.();
-        } catch (e) {}
-        try {
-          (usePricingStore as any).getState().clear?.();
-        } catch (e) {}
-
-        setLoading(false);
-        window.location.href = `/`;
-      },
-      onClose: (res: any) => {
-        console.info("Payment closed", res);
-        if (!paymentCompletedRef.current) {
+    try {
+      window.MonnifySDK.initialize({
+          amount: amountToPay,
+        currency: "NGN",
+          customerName: name,
+          customerFullName: name,
+        customerEmail: email,
+        apiKey,
+        contractCode,
+        baseUrl: baseUrl || undefined,
+        paymentDescription: `${selectedPlan?.name ?? "Plan"} - ${isQuarterly ? "Quarterly" : "Monthly"}`,
+        metadata: {
+          planId: selectedPlan?.id,
+          interval,
+          domainAdded,
+        },
+        onLoadStart: () => {
+          setLoading(true);
+        },
+        onLoadComplete: () => {
           setLoading(false);
-          window.location.href = "/checkout";
-        }
-      },
-    });
+        },
+        onComplete: (res: any) => {
+          paymentCompletedRef.current = true;
+          try {
+            useRegisterStore.getState().clear?.();
+          } catch (e) {}
+          try {
+            useCheckoutStore.getState().clear?.();
+          } catch (e) {}
+          try {
+            useTemplateStore.getState().clear?.();
+          } catch (e) {}
+          try {
+            (usePricingStore as any).getState().clear?.();
+          } catch (e) {}
+
+          setLoading(false);
+          window.location.href = `/`;
+        },
+        onClose: (res: any) => {
+          if (!paymentCompletedRef.current) {
+            setLoading(false);
+            window.location.href = "/checkout";
+          }
+        },
+      });
+    } catch (err: any) {
+      setLoading(false);
+      const message = err?.message || String(err);
+      console.error("Monnify initialization failed:", message);
+      alert("Payment initialization failed: " + message);
+    }
   };
 
   return (

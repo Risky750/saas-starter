@@ -17,13 +17,12 @@ export default function TemplatesClient({
   const { selectedId, setSelectedId, selectedPreview, setSelectedPreview, category, setCategory } =
     useTemplateStore();
 
-  // Default category fallback if store is empty
   const [localCategory, setLocalCategory] = useState<"website" | "portfolio">(
     category || "website"
   );
 
   useEffect(() => {
-    setCategory(localCategory); // sync store with local state
+    setCategory(localCategory);
   }, [localCategory, setCategory]);
 
   const list = templatesByCategory[localCategory] || [];
@@ -31,7 +30,14 @@ export default function TemplatesClient({
   const pick = (template: Template) => {
     setSelectedId(template.id);
     setSelectedPreview?.(template.images?.[0] || "");
-    router.push("/pricing"); // move to pricing
+    router.push("/pricing");
+  };
+
+  const templatesBase = (process.env.NEXT_PUBLIC_TEMPLATES_BASE_URL || "").replace(/\/$/, "");
+
+  const liveHref = (template: Template) => {
+    const parts = template.id.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+    return templatesBase ? `${templatesBase}/${parts}` : `/demo/${parts}`;
   };
 
   return (
