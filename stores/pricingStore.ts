@@ -23,7 +23,7 @@ export const usePricingStore = create<PricingState>()(
       setInterval: (interval) => set({ interval }),
       setPlanId: (planId) => set({ planId }),
       // Clear persisted pricing state
-      clear: () => set({ interval: 'monthly', planId: null }),
+  clear: () => set({ interval: 'quarterly', planId: null }),
     }),
     {
       name: "pricing-storage",
