@@ -17,7 +17,7 @@ export const usePricingStore = create<PricingState>()(
   persist(
     (set) => ({
       plans: [],
-      interval: "monthly", // default
+  interval: "quarterly", 
       planId: null,
       setPlans: (plans) => set({ plans }),
       setInterval: (interval) => set({ interval }),
