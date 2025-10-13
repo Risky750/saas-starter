@@ -39,9 +39,8 @@ export default function TemplatesClient({
     const rawParts = template.id.split("/").filter(Boolean);
     const namePart = rawParts[rawParts.length - 1] || template.id;
     const parts = encodeURIComponent(namePart);
-    const cat = localCategory || category || "website";
-    // New fallback path: /demo/{category}/tinyurl/{templateName}
-    return templatesBase ? `${templatesBase}/${parts}` : `/demo/${cat}/tinyurl/${parts}`;
+    // If a custom templates base is provided, use it. Otherwise use TinyURL shortlink directly.
+    return templatesBase ? `${templatesBase}/${parts}` : `https://tinyurl.com/${parts}`;
   };
 
   return (

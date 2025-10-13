@@ -92,9 +92,8 @@ export default function PricingPage() {
             const namePart = rawParts[rawParts.length - 1] || selectedId;
             const parts = encodeURIComponent(namePart);
             const baseRaw = (process.env.NEXT_PUBLIC_TEMPLATES_BASE_URL || "").replace(/\/$/, "");
-            const cat = category || "website";
-            // New fallback path: /demo/{category}/tinyurl/{templateName}
-            const url = baseRaw ? `${baseRaw}/${parts}` : `/demo/${cat}/tinyurl/${parts}`;
+            // If a custom templates base is provided, use it. Otherwise use TinyURL shortlink directly.
+            const url = baseRaw ? `${baseRaw}/${parts}` : `https://tinyurl.com/${parts}`;
             window.open(url);
           }}
           className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"
