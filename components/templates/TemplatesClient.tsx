@@ -37,7 +37,8 @@ export default function TemplatesClient({
 
   const liveHref = (template: Template) => {
     const parts = template.id.split("/").filter(Boolean).map(encodeURIComponent).join("/");
-    return templatesBase ? `${templatesBase}/${parts}` : `/demo/${parts}`;
+    // New fallback path: /demo/website/tinyurl/{template}
+    return templatesBase ? `${templatesBase}/${parts}` : `/demo/website/tinyurl/${parts}`;
   };
 
   return (

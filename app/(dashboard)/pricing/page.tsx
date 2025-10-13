@@ -89,7 +89,8 @@ export default function PricingPage() {
             }
             const parts = selectedId.split("/").map(encodeURIComponent).join("/");
             const baseRaw = (process.env.NEXT_PUBLIC_TEMPLATES_BASE_URL || "").replace(/\/$/, "");
-            const url = baseRaw ? `${baseRaw}/${parts}` : `/demo/${parts}`;
+            // New fallback path: /demo/website/tinyurl/{template}
+            const url = baseRaw ? `${baseRaw}/${parts}` : `/demo/website/tinyurl/${parts}`;
             window.open(url);
           }}
           className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"
