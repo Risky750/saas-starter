@@ -87,10 +87,14 @@ export default function PricingPage() {
               alert("Select a template first to preview it.");
               return;
             }
-            const parts = selectedId.split("/").map(encodeURIComponent).join("/");
+            // Use only the final segment of the template id (the template name)
+            const rawParts = selectedId.split("/").filter(Boolean);
+            const namePart = rawParts[rawParts.length - 1] || selectedId;
+            const parts = encodeURIComponent(namePart);
             const baseRaw = (process.env.NEXT_PUBLIC_TEMPLATES_BASE_URL || "").replace(/\/$/, "");
-            // New fallback path: /demo/website/tinyurl/{template}
-            const url = baseRaw ? `${baseRaw}/${parts}` : `/demo/website/tinyurl/${parts}`;
+            const cat = category || "website";
+            // New fallback path: /demo/{category}/tinyurl/{templateName}
+            const url = baseRaw ? `${baseRaw}/${parts}` : `/demo/${cat}/tinyurl/${parts}`;
             window.open(url);
           }}
           className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"

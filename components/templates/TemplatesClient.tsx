@@ -36,9 +36,12 @@ export default function TemplatesClient({
   const templatesBase = (process.env.NEXT_PUBLIC_TEMPLATES_BASE_URL || "").replace(/\/$/, "");
 
   const liveHref = (template: Template) => {
-    const parts = template.id.split("/").filter(Boolean).map(encodeURIComponent).join("/");
-    // New fallback path: /demo/website/tinyurl/{template}
-    return templatesBase ? `${templatesBase}/${parts}` : `/demo/website/tinyurl/${parts}`;
+    const rawParts = template.id.split("/").filter(Boolean);
+    const namePart = rawParts[rawParts.length - 1] || template.id;
+    const parts = encodeURIComponent(namePart);
+    const cat = localCategory || category || "website";
+    // New fallback path: /demo/{category}/tinyurl/{templateName}
+    return templatesBase ? `${templatesBase}/${parts}` : `/demo/${cat}/tinyurl/${parts}`;
   };
 
   return (
