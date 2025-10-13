@@ -12,8 +12,9 @@ export const useRegisterStore = create<RegisterStore>()(
     (set) => ({
       name: "",
       email: "",
+      phone: "",
       setField: (field, value) => set((state) => ({ ...state, [field]: value })),
-      clear: () => set({ name: "", email: "" }),
+      clear: () => set({ name: "", email: "", phone: "" }),
     }),
     {
       name: "register-storage",

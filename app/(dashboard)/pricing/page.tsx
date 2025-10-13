@@ -11,6 +11,8 @@ import { usePricingStore } from "@/stores/pricingStore";
 import type { Plan } from "@/types/pricing";
 import { Check } from "lucide-react";
 import { defaultPlans } from "@/lib/defaultPlans";
+import { ChevronLeft } from "lucide-react";
+import { Router } from "next/router";
 
 
 export default function PricingPage() {
@@ -66,7 +68,10 @@ export default function PricingPage() {
   };
 
   return (
-    <section className="bg-[#f5f2f0] w-full flex justify-center items-start px-4 py-8">
+    <section className="bg-[#f5f2f0] w-full flex justify-center items-start px-4 py-8 h-screen">
+        <div className="absolute top-4 left-4 w-9 h-9 rounded-full bg-[#7D141D] text-white place-content-center justify-center hover:opacity-100 transition">
+       <a href="/templates" ><ChevronLeft className="w-5 h-5"/></a>
+              </div>
   <div className="w-full max-w-7xl flex flex-col md:flex-row gap-6 items-center md:items-start">
     {/* Left: Template Preview */}
     {selectedPreview && (
@@ -94,6 +99,10 @@ export default function PricingPage() {
             const baseRaw = (process.env.NEXT_PUBLIC_TEMPLATES_BASE_URL || "").replace(/\/$/, "");
             // If a custom templates base is provided, use it. Otherwise use TinyURL shortlink directly.
             const url = baseRaw ? `${baseRaw}/${parts}` : `https://tinyurl.com/${parts}`;
+            try {
+              // mark that the user previewed this template from the demo flow
+              localStorage.setItem('previewed_demo_template', namePart);
+            } catch (e) {}
             window.open(url);
           }}
           className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"

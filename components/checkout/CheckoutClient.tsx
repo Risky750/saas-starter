@@ -121,9 +121,8 @@ export default function CheckoutClient() {
     setLoading(true);
 
     // use persisted total when available so refresh doesn't change the amount
-      const storedTotal = snap.total;
-      const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
-      const amountToPay = Math.max(1, Number((displayTotal || 0).toFixed(2)));
+    const storedTotal = snap.total;
+    const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
 
     const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
     const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
@@ -138,8 +137,8 @@ export default function CheckoutClient() {
     }
 
     try {
-      window.MonnifySDK.initialize({
-          amount: amountToPay,
+    window.MonnifySDK.initialize({
+      amount: displayTotal,
         currency: "NGN",
           customerName: name,
           customerFullName: name,
@@ -302,3 +301,4 @@ export default function CheckoutClient() {
     </div>
   );
 }
+
