@@ -200,7 +200,7 @@ export function CheckoutStepper({
           />
           {/* Drawer panel */}
           <motion.div
-            className="fixed z-50 top-0 left-0 h-screen w-full sm:w-full md:w-[45vw] lg:w-[45vw] flex items-center justify-center"
+            className="fixed z-50 top-0 right-0 h-screen w-full sm:w-full md:w-[45vw] lg:w-[45vw] flex items-center justify-center"
             initial={drawerHidden}
             animate={drawerVisible}
             exit={drawerExit}
