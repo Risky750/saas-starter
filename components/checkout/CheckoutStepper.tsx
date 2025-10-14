@@ -11,6 +11,7 @@ import { useRegisterStore } from "@/stores/registerStores";
 import { useCheckoutStore, useCheckoutSnapshot } from "@/stores/checkoutStore";
 import type { Plan as PricePlan } from "@/types/pricing";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 const DOMAIN_COST = 7500;
 
@@ -28,21 +29,24 @@ export function CheckoutStepper({
   initialPlanId?: string;
   initialTemplateId?: string;
 }) {
+  const router = useRouter();
+
   const { selectedPreview } = useTemplateStore();
   const { plans, interval } = usePricingStore();
   const { name, email, setField } = useRegisterStore();
   const { domainAdded, setDomainAdded, setChoice, setTotal } = useCheckoutStore();
   const snap = useCheckoutSnapshot();
 
-  const [step, setStep] = useState(0);
+  // 0 = Plans, 1 = Details, 2 = Summary/Payment
+  const [step, setStep] = useState<number>(0);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(snap.planId || null);
   const [loading, setLoading] = useState(false);
   const paymentCompletedRef = useRef(false);
 
-  // Drawer open state (internal) - default open on checkout2
-  const [internalOpen, setInternalOpen] = useState(open);
+  // Drawer open state (internal)
+  const [internalOpen, setInternalOpen] = useState<boolean>(open);
 
-  // Detect mobile vs desktop (responsive animation) - mobile < 768px
+  // Responsive breakpoint: mobile if <768px
   const [isMobile, setIsMobile] = useState<boolean>(
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
@@ -57,6 +61,11 @@ export function CheckoutStepper({
     };
   }, []);
 
+  // Keep internalOpen in sync if parent toggles `open`
+  useEffect(() => {
+    setInternalOpen(open);
+  }, [open]);
+
   // Prevent body scroll while overlay is open
   useEffect(() => {
     const prev = typeof document !== "undefined" ? document.body.style.overflow : "";
@@ -69,6 +78,33 @@ export function CheckoutStepper({
       if (typeof document !== "undefined") document.body.style.overflow = prev;
     };
   }, [internalOpen]);
+
+  // If an initialTemplateId is provided (demo return), we clear persisted flag
+  useEffect(() => {
+    if (initialTemplateId) {
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("previewed_demo_template");
+        }
+      } catch (e) {}
+    }
+  }, [initialTemplateId]);
+
+  // Accept initialPlanId (preselect plan) or start at Plans if none
+  useEffect(() => {
+    if (initialPlanId) {
+      setSelectedPlanId(initialPlanId);
+      // If plan exists on open, start at Details step
+      setStep(1);
+    } else if (initialTemplateId) {
+      // If a template was supplied but no plan, start at Plans step
+      setStep(0);
+    } else if (snap.planId) {
+      setSelectedPlanId(snap.planId);
+      setStep(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPlanId, initialTemplateId]);
 
   const selectedPlan = useMemo(
     () => (plans as PricePlan[]).find((p) => p.id === selectedPlanId),
@@ -85,6 +121,7 @@ export function CheckoutStepper({
   const subtotal = isQuarterly ? planPrice * 3 : planPrice;
   const totalAmount = isQuarterly ? subtotal : subtotal + (domainAdded ? DOMAIN_COST : 0);
 
+  // hydrate persisted checkout snapshot if present
   useEffect(() => {
     if (snap.templateId) setChoice?.(snap.templateId, snap.planId || "basic", interval as any);
     if (snap.total) setTotal?.(snap.total);
@@ -92,6 +129,7 @@ export function CheckoutStepper({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Load Monnify SDK defensively
   useEffect(() => {
     if (!(window as any).MonnifySDK) {
       const script = document.createElement("script");
@@ -119,6 +157,7 @@ export function CheckoutStepper({
       setChoice?.(useTemplateStore.getState().selectedId || "", selectedPlanId || "basic", interval as any);
       setTotal?.(amountToPay);
     } catch (e) {}
+
     const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
     const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
     const baseUrl = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_BASE_URL as any);
@@ -150,7 +189,6 @@ export function CheckoutStepper({
         onComplete: (res: any) => {
           paymentCompletedRef.current = true;
           setLoading(false);
-          // close drawer and invoke callback
           setInternalOpen(false);
           onClose?.();
         },
@@ -185,21 +223,24 @@ export function CheckoutStepper({
     visible: { opacity: 1 },
   };
 
-  // drawer: on desktop slide from RIGHT (x: "100%"), on mobile slide from bottom (y: "100%")
+  // drawer: desktop slide from RIGHT (x: "100%"), mobile slide from bottom (y: "100%")
   const drawerHidden = isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, x: "100%" };
   const drawerVisible = { opacity: 1, x: 0, y: 0, transition: { duration: 0.45 } };
   const drawerExit = isMobile
     ? { opacity: 0, y: "100%", transition: { duration: 0.4 } }
     : { opacity: 0, x: "100%", transition: { duration: 0.4 } };
 
-  // Set initial plan/template if provided
-  useEffect(() => {
-    if (initialPlanId) setSelectedPlanId(initialPlanId);
-    if (initialTemplateId) {
-      // if you want to set selected id into template store uncomment next line:
-      // useTemplateStore.getState().setSelectedId(initialTemplateId);
+  // Back to templates handler
+  const handleBackToTemplates = () => {
+    try {
+      // keep stores as-is; just navigate away
+      setInternalOpen(false);
+      onClose?.();
+      router.push("/templates");
+    } catch (e) {
+      router.push("/templates");
     }
-  }, [initialPlanId, initialTemplateId]);
+  };
 
   return (
     <AnimatePresence>
@@ -227,17 +268,9 @@ export function CheckoutStepper({
             animate={drawerVisible}
             exit={drawerExit}
           >
-            {/* Inner content wrapper: ensures content is centered and has the card sizing */}
+            {/* Inner content wrapper */}
             <div
-              className={`
-                  relative
-                  bg-transparent
-                  w-full
-                  h-full
-                  flex
-                  items-center
-                  justify-center
-                `}
+              className="relative bg-transparent w-full h-full flex items-center justify-center"
               onClick={(e) => e.stopPropagation()}
             >
               {/* The actual stepper card */}
@@ -247,16 +280,20 @@ export function CheckoutStepper({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.25 }}
-                className="bg-white  shadow-xl w-full max-w-3xl h-screen sm:h-screen md:h-screen lg:h-screen p-6 "
-                style={{
-                  boxSizing: "border-box",
-                }}
+                className="bg-white shadow-xl w-full max-w-3xl h-screen sm:h-screen md:h-screen lg:h-screen p-6 overflow-auto"
+                style={{ boxSizing: "border-box" }}
               >
-                {/* Stepper content (your original UI) */}
-                <div className="h-full flex flex-col justify-center">
-                  {/* Stepper header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
+                {/* Header: Back to templates + step labels */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={handleBackToTemplates}
+                      className="text-sm text-gray-600 hover:text-rose-600"
+                      aria-label="Back to templates"
+                    >
+                      ← Back to Templates
+                    </button>
+                    <div className="hidden sm:flex items-center gap-3">
                       {["Plan", "Details", "Payment"].map((label, i) => (
                         <div key={label} className="flex items-center gap-3">
                           <div
@@ -271,9 +308,12 @@ export function CheckoutStepper({
                       ))}
                     </div>
                   </div>
+                  <div className="sm:hidden text-sm text-gray-700">Step {step + 1} / 3</div>
+                </div>
 
-                  {/* Card */}
-                  <div className="bg-white rounded-2xl shadow-md p-6 overflow-auto">
+                {/* Content */}
+                <div className="h-full flex flex-col justify-center">
+                  <div className="bg-white rounded-2xl shadow-md p-6">
                     {step === 0 && (
                       <div className="space-y-4">
                         <h4 className="text-lg font-semibold">Choose a plan</h4>
@@ -289,9 +329,7 @@ export function CheckoutStepper({
                               >
                                 <div>
                                   <div className="flex items-baseline gap-2">
-                                    <span className="text-xl font-bold">
-                                      ₦{Math.round(price).toLocaleString()}
-                                    </span>
+                                    <span className="text-xl font-bold">₦{Math.round(price).toLocaleString()}</span>
                                     <span className="text-sm text-gray-500">{isQuarterly ? "/quarter" : "/month"}</span>
                                   </div>
                                   <div className="text-sm text-gray-600 mt-2">{p.name}</div>
