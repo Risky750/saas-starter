@@ -13,10 +13,6 @@ import type { Plan } from "@/types/pricing";
 import { Check, ChevronLeft } from "lucide-react";
 import { defaultPlans } from "@/lib/defaultPlans";
 
-const CheckoutStepper = dynamic(
-  () => import("@/components/checkout/CheckoutStepper").then((m) => m.CheckoutStepper),
-  { ssr: false }
-);
 const PricingOverlayLauncher = dynamic(
   () => import("@/components/checkout/PricingOverlayLauncher").then((m) => m.default),
   { ssr: false }
@@ -38,7 +34,7 @@ export default function PricingPage() {
     if (typeof window === "undefined") return;
     const previewed = localStorage.getItem("previewed_demo_template");
     if (previewed) {
-      router.push(`/pricing?overlay=checkout2&template=${encodeURIComponent(previewed)}`);
+      router.replace(`/pricing?overlay=checkout2&template=${encodeURIComponent(previewed)}`);
       localStorage.removeItem("previewed_demo_template"); // ✅ clear after use
     }
   }, [router]);

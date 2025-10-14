@@ -42,10 +42,12 @@ export function CheckoutStepper({
   // Drawer open state (internal) - default open on checkout2
   const [internalOpen, setInternalOpen] = useState(open);
 
-  // Detect mobile vs desktop (responsive animation)
-  const [isMobile, setIsMobile] = useState<boolean>(typeof window !== "undefined" ? window.innerWidth < 640 : false);
+  // Detect mobile vs desktop (responsive animation) - mobile < 768px
+  const [isMobile, setIsMobile] = useState<boolean>(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     if (typeof window !== "undefined") {
       handleResize();
       window.addEventListener("resize", handleResize);
@@ -54,6 +56,19 @@ export function CheckoutStepper({
       if (typeof window !== "undefined") window.removeEventListener("resize", handleResize);
     };
   }, []);
+
+  // Prevent body scroll while overlay is open
+  useEffect(() => {
+    const prev = typeof document !== "undefined" ? document.body.style.overflow : "";
+    if (internalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = prev;
+    }
+    return () => {
+      if (typeof document !== "undefined") document.body.style.overflow = prev;
+    };
+  }, [internalOpen]);
 
   const selectedPlan = useMemo(
     () => (plans as PricePlan[]).find((p) => p.id === selectedPlanId),
@@ -74,6 +89,7 @@ export function CheckoutStepper({
     if (snap.templateId) setChoice?.(snap.templateId, snap.planId || "basic", interval as any);
     if (snap.total) setTotal?.(snap.total);
     if (snap.planId) setSelectedPlanId(snap.planId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -99,7 +115,6 @@ export function CheckoutStepper({
     setLoading(true);
 
     const amountToPay = Math.max(1, Number((totalAmount || 0).toFixed(2)));
-    // persist choice & total so CheckoutClient and other pages read the same values
     try {
       setChoice?.(useTemplateStore.getState().selectedId || "", selectedPlanId || "basic", interval as any);
       setTotal?.(amountToPay);
@@ -135,6 +150,8 @@ export function CheckoutStepper({
         onComplete: (res: any) => {
           paymentCompletedRef.current = true;
           setLoading(false);
+          // close drawer and invoke callback
+          setInternalOpen(false);
           onClose?.();
         },
         onClose: () => {
@@ -153,11 +170,14 @@ export function CheckoutStepper({
   // Close on ESC
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setInternalOpen(false);
+      if (e.key === "Escape") {
+        setInternalOpen(false);
+        onClose?.();
+      }
     };
     if (internalOpen) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [internalOpen]);
+  }, [internalOpen, onClose]);
 
   // Motion variants
   const backdropVariant = {
@@ -165,16 +185,18 @@ export function CheckoutStepper({
     visible: { opacity: 1 },
   };
 
-  // drawer: on desktop slide from left (x: "-100%"), on mobile slide from bottom (y: "100%")
-  const drawerHidden = isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, x: "-100%" };
-  const drawerVisible = { opacity: 1, x: 0, y: 0, transition: { duration: 0.5 } };
-  const drawerExit = isMobile ? { opacity: 0, y: "100%", transition: { duration: 0.45 } } : { opacity: 0, x: "-100%", transition: { duration: 0.45 } };
+  // drawer: on desktop slide from RIGHT (x: "100%"), on mobile slide from bottom (y: "100%")
+  const drawerHidden = isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, x: "100%" };
+  const drawerVisible = { opacity: 1, x: 0, y: 0, transition: { duration: 0.45 } };
+  const drawerExit = isMobile
+    ? { opacity: 0, y: "100%", transition: { duration: 0.4 } }
+    : { opacity: 0, x: "100%", transition: { duration: 0.4 } };
 
   // Set initial plan/template if provided
   useEffect(() => {
     if (initialPlanId) setSelectedPlanId(initialPlanId);
     if (initialTemplateId) {
-      // If you have a setTemplateId in your store, call it here
+      // if you want to set selected id into template store uncomment next line:
       // useTemplateStore.getState().setSelectedId(initialTemplateId);
     }
   }, [initialPlanId, initialTemplateId]);
@@ -183,7 +205,7 @@ export function CheckoutStepper({
     <AnimatePresence>
       {internalOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop with blur */}
           <motion.div
             className="fixed inset-0 z-40"
             initial="hidden"
@@ -191,7 +213,7 @@ export function CheckoutStepper({
             exit="hidden"
             variants={backdropVariant}
             transition={{ duration: 0.25 }}
-            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+            style={{ backgroundColor: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }}
             onClick={() => {
               setInternalOpen(false);
               onClose?.();
@@ -215,9 +237,7 @@ export function CheckoutStepper({
                   flex
                   items-center
                   justify-center
-           
                 `}
-              // Prevent click on panel from closing the drawer
               onClick={(e) => e.stopPropagation()}
             >
               {/* The actual stepper card */}
@@ -229,11 +249,9 @@ export function CheckoutStepper({
                 transition={{ duration: 0.25 }}
                 className="bg-white  shadow-xl w-full max-w-3xl h-screen sm:h-screen md:h-screen lg:h-screen p-6 "
                 style={{
-                 
                   boxSizing: "border-box",
                 }}
               >
-          
                 {/* Stepper content (your original UI) */}
                 <div className="h-full flex flex-col justify-center">
                   {/* Stepper header */}
@@ -255,7 +273,7 @@ export function CheckoutStepper({
                   </div>
 
                   {/* Card */}
-                  <div className="bg-white rounded-2xl shadow-md p-6">
+                  <div className="bg-white rounded-2xl shadow-md p-6 overflow-auto">
                     {step === 0 && (
                       <div className="space-y-4">
                         <h4 className="text-lg font-semibold">Choose a plan</h4>
@@ -271,8 +289,10 @@ export function CheckoutStepper({
                               >
                                 <div>
                                   <div className="flex items-baseline gap-2">
-                                    <span className="text-xl font-bold">₦{Math.round(price).toLocaleString()}</span>
-                                    <span className="text-sm text-gray-500">/month</span>
+                                    <span className="text-xl font-bold">
+                                      ₦{Math.round(price).toLocaleString()}
+                                    </span>
+                                    <span className="text-sm text-gray-500">{isQuarterly ? "/quarter" : "/month"}</span>
                                   </div>
                                   <div className="text-sm text-gray-600 mt-2">{p.name}</div>
                                 </div>
@@ -361,7 +381,7 @@ export function CheckoutStepper({
                           </div>
                           <div className="flex justify-between">
                             <span>Billed</span>
-                            <strong>{isQuarterly ? "Quarterly" : interval}</strong>
+                            <strong>{isQuarterly ? "Quarterly" : "Monthly"}</strong>
                           </div>
                           <div className="flex justify-between">
                             <span>Domain</span>
