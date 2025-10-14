@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTemplateStore } from "@/stores/templateStore";
 import { useCheckoutStore } from "@/stores/checkoutStore";
@@ -13,14 +13,16 @@ import { Check } from "lucide-react";
 import { defaultPlans } from "@/lib/defaultPlans";
 import { ChevronLeft } from "lucide-react";
 import { Router } from "next/router";
+import dynamic from "next/dynamic";
 
+const CheckoutStepper = dynamic(() => import("@/components/checkout/CheckoutStepper").then(m => m.CheckoutStepper), { ssr: false });
 
 export default function PricingPage() {
   const router = useRouter();
   const { selectedId, selectedPreview, category } = useTemplateStore();
   const { setChoice, setTotal } = useCheckoutStore();
   const { plans: storedPlans, setPlans, interval, setInterval } = usePricingStore();
-
+  const search = useSearchParams();
 
   useEffect(() => {
     if (storedPlans.length === 0) setPlans(defaultPlans);
@@ -49,10 +51,19 @@ export default function PricingPage() {
 
   const selectPlan = (plan: Plan) => {
     if (!selectedId) return;
-
-    const price = interval === "quarterly" ? plan.quarterly : plan.monthly;
+    const price = interval === "quarterly" ? (plan.quarterly ?? plan.monthly) * 3 : plan.monthly;
     setChoice(selectedId, plan.id, interval);
     setTotal(price);
+
+    // Check for live demo flag
+    const rawParts = selectedId.split("/").filter(Boolean);
+    const namePart = rawParts[rawParts.length - 1] || selectedId;
+    const previewFlag = typeof window !== "undefined" ? localStorage.getItem("previewed_demo_template") : null;
+    if (previewFlag && previewFlag === namePart) {
+      // Instead of routing to /checkout2, show overlay
+      router.push(`/pricing?overlay=checkout2&plan=${plan.id}&template=${encodeURIComponent(namePart)}`);
+      return;
+    }
 
     router.push("/checkout");
   };
@@ -67,11 +78,16 @@ export default function PricingPage() {
     );
   };
 
+  // Overlay logic
+  const overlay = search.get("overlay");
+  const planQuery = search.get("plan");
+  const templateQuery = search.get("template");
+
   return (
     <section className="bg-[#f5f2f0] w-full flex justify-center items-start px-4 py-8 h-screen">
         <div className="absolute top-4 left-4 w-9 h-9 rounded-full bg-[#7D141D] text-white place-content-center justify-center hover:opacity-100 transition">
-       <a href="/templates" ><ChevronLeft className="w-5 h-5"/></a>
-              </div>
+    <a href="/templates" aria-label="Back to templates" title="Back to templates"><ChevronLeft className="w-5 h-5"/></a>
+      </div>
   <div className="w-full max-w-7xl flex flex-col md:flex-row gap-6 items-center md:items-start">
     {/* Left: Template Preview */}
     {selectedPreview && (
@@ -103,7 +119,7 @@ export default function PricingPage() {
               // mark that the user previewed this template from the demo flow
               localStorage.setItem('previewed_demo_template', namePart);
             } catch (e) {}
-            window.open(url);
+          //  window.open(url);
           }}
           className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"
         >
@@ -181,6 +197,15 @@ export default function PricingPage() {
       </div>
     </div>
   </div>
+
+  {overlay === "checkout2" && (
+        <CheckoutStepper
+          open
+          initialPlanId={planQuery || undefined}
+          initialTemplateId={templateQuery || undefined}
+          onClose={() => router.push("/pricing")}
+        />
+      )}
 </section>
   );
 }

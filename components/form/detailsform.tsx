@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { useRegisterStore } from "@/stores/registerStores";
 
 export default function Register() {
-  const { name, email, setField } = useRegisterStore();
+  const { name, email, phone, setField } = useRegisterStore();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function Register() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email }), // phoneNumber removed
+      body: JSON.stringify({ name, email,phone }), // phoneNumber removed
     });
 
     const json = await res.json();
@@ -46,6 +46,14 @@ export default function Register() {
           />
 
           <Input
+            placeholder="Phone Number"
+            value={phone}
+            onChange={(e) => setField("phone", e.target.value)}
+            type="tel"
+            required
+            className="border-[#7D141D]/30 focus:ring-[#FF1E27]"
+          />
+             <Input
             placeholder="Email"
             value={email}
             onChange={(e) => setField("email", e.target.value)}

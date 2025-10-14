@@ -30,16 +30,7 @@ export default function TemplatesClient({
   const pick = (template: Template) => {
     setSelectedId(template.id);
     setSelectedPreview?.(template.images?.[0] || "");
-    try {
-      const rawParts = template.id.split("/").filter(Boolean);
-      const namePart = rawParts[rawParts.length - 1] || template.id;
-      const previewed = localStorage.getItem('previewed_demo_template');
-      if (previewed && previewed === namePart) {
-        localStorage.removeItem('previewed_demo_template');
-        router.push('/checkout2');
-        return;
-      }
-    } catch (e) {}
+    // Always navigate to pricing — the pricing page will decide whether to use the fast checkout (/checkout2)
     router.push("/pricing");
   };
 

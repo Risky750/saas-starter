@@ -1,257 +1,403 @@
+// /components/checkout/Stepper.tsx
 "use client";
 
-import React, { useMemo, useState } from "react";
-import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
-import { useCheckoutStore } from "@/stores/checkoutStore";
-import { useRegisterStore } from "@/stores/registerStores";
+import { Loader2 } from "lucide-react";
+import { useTemplateStore } from "@/stores/templateStore";
 import { usePricingStore } from "@/stores/pricingStore";
-import type { Plan } from "@/types/pricing";
+import { useRegisterStore } from "@/stores/registerStores";
+import { useCheckoutStore, useCheckoutSnapshot } from "@/stores/checkoutStore";
+import type { Plan as PricePlan } from "@/types/pricing";
+import { motion, AnimatePresence } from "framer-motion";
 
-// next/dynamic typing can be strict; cast to any to accept the imported module shape
-const CheckoutClient: any = dynamic(() => import("@/components/checkout/CheckoutClient") as any, { ssr: false });
+const DOMAIN_COST = 7500;
 
-export default function CheckoutStepper() {
-  const router = useRouter();
-  const { templateId, planId, interval, setChoice, setTotal } = useCheckoutStore();
-  const { plans } = usePricingStore();
+const formatNaira = (amount: number) =>
+  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(amount);
 
-  const [open] = useState(true); // always open on checkout2 route
+export function CheckoutStepper({
+  open = true,
+  onClose,
+  initialPlanId,
+  initialTemplateId,
+}: {
+  open?: boolean;
+  onClose?: () => void;
+  initialPlanId?: string;
+  initialTemplateId?: string;
+}) {
+  const { selectedPreview } = useTemplateStore();
+  const { plans, interval } = usePricingStore();
+  const { name, email, setField } = useRegisterStore();
+  const { domainAdded, setDomainAdded, setChoice, setTotal } = useCheckoutStore();
+  const snap = useCheckoutSnapshot();
+
   const [step, setStep] = useState(0);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(snap.planId || null);
+  const [loading, setLoading] = useState(false);
+  const paymentCompletedRef = useRef(false);
 
-  // Local details form
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  // Drawer open state (internal) - default open on checkout2
+  const [internalOpen, setInternalOpen] = useState(open);
 
-  const availablePlans = useMemo<Plan[]>(() => plans ?? [], [plans]);
-
-  const selectedPlan = useMemo(() => availablePlans.find((p) => p.id === planId) ?? null, [availablePlans, planId]);
-
-  const selectPlan = (p: Plan) => {
-    if (!templateId) {
-      alert("Please select a template before choosing a plan.");
-      router.push("/templates");
-      return;
+  // Detect mobile vs desktop (responsive animation)
+  const [isMobile, setIsMobile] = useState<boolean>(typeof window !== "undefined" ? window.innerWidth < 640 : false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    if (typeof window !== "undefined") {
+      handleResize();
+      window.addEventListener("resize", handleResize);
     }
-    setChoice(templateId, p.id, interval);
-    const price = interval === "quarterly" ? (p.quarterly ?? p.monthly) : p.monthly;
-    setTotal(price);
+    return () => {
+      if (typeof window !== "undefined") window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  const selectedPlan = useMemo(
+    () => (plans as PricePlan[]).find((p) => p.id === selectedPlanId),
+    [plans, selectedPlanId]
+  ) as PricePlan | undefined;
+
+  const planPrice = selectedPlan
+    ? interval === "quarterly"
+      ? (selectedPlan as any).quarterly || selectedPlan.monthly
+      : selectedPlan.monthly
+    : 0;
+
+  const isQuarterly = interval === "quarterly";
+  const subtotal = isQuarterly ? planPrice * 3 : planPrice;
+  const totalAmount = isQuarterly ? subtotal : subtotal + (domainAdded ? DOMAIN_COST : 0);
+
+  useEffect(() => {
+    if (snap.templateId) setChoice?.(snap.templateId, snap.planId || "basic", interval as any);
+    if (snap.total) setTotal?.(snap.total);
+    if (snap.planId) setSelectedPlanId(snap.planId);
+  }, []);
+
+  useEffect(() => {
+    if (!(window as any).MonnifySDK) {
+      const script = document.createElement("script");
+      script.src = "https://sdk.monnify.com/plugin/monnify.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  const sanitizeEnv = (v?: string) => {
+    if (!v) return "";
+    return v.replace(/^\s*\"(.*)\"\s*$/, "$1");
   };
 
-  const canProceedFromPlans = !!useCheckoutStore.getState().planId;
-
-  const next = () => {
-    if (step === 0 && !canProceedFromPlans) {
-      alert("Please pick a plan to continue.");
+  const proceedToPayment = async () => {
+    if (!name || !email) {
+      alert("Please enter your name and email before paying");
       return;
     }
 
-    if (step === 1) {
-      // basic validation
-      if (!name || !email) {
-        alert("Please enter your name and email.");
-        return;
-      }
-      // persist details to register store so CheckoutClient can use them
-      try {
-        useRegisterStore.getState().setField?.('name', name);
-        useRegisterStore.getState().setField?.('email', email);
-        useRegisterStore.getState().setField?.('phone', phone);
-      } catch (e) {
-        // ignore
-      }
+    setLoading(true);
+
+    const amountToPay = Math.max(1, Number((totalAmount || 0).toFixed(2)));
+    // persist choice & total so CheckoutClient and other pages read the same values
+    try {
+      setChoice?.(useTemplateStore.getState().selectedId || "", selectedPlanId || "basic", interval as any);
+      setTotal?.(amountToPay);
+    } catch (e) {}
+    const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
+    const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
+    const baseUrl = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_BASE_URL as any);
+
+    if (!apiKey || !contractCode) {
+      setLoading(false);
+      alert("Payment configuration missing. Contact support.");
+      return;
     }
 
-    setStep((s) => Math.min(2, s + 1));
+    try {
+      (window as any).MonnifySDK.initialize({
+        amount: amountToPay,
+        currency: "NGN",
+        customerName: name,
+        customerFullName: name,
+        customerEmail: email,
+        apiKey,
+        contractCode,
+        baseUrl: baseUrl || undefined,
+        paymentDescription: `${selectedPlan?.name ?? "Plan"} - ${isQuarterly ? "Quarterly" : "Monthly"}`,
+        metadata: {
+          planId: selectedPlan?.id,
+          interval,
+          domainAdded,
+        },
+        onLoadStart: () => setLoading(true),
+        onLoadComplete: () => setLoading(false),
+        onComplete: (res: any) => {
+          paymentCompletedRef.current = true;
+          setLoading(false);
+          onClose?.();
+        },
+        onClose: () => {
+          if (!paymentCompletedRef.current) {
+            setLoading(false);
+            setStep(0);
+          }
+        },
+      });
+    } catch (err: any) {
+      setLoading(false);
+      alert("Payment init failed: " + (err?.message || String(err)));
+    }
   };
 
-  const back = () => setStep((s) => Math.max(0, s - 1));
+  // Close on ESC
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setInternalOpen(false);
+    };
+    if (internalOpen) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [internalOpen]);
+
+  // Motion variants
+  const backdropVariant = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+  };
+
+  // drawer: on desktop slide from left (x: "-100%"), on mobile slide from bottom (y: "100%")
+  const drawerHidden = isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, x: "-100%" };
+  const drawerVisible = { opacity: 1, x: 0, y: 0, transition: { duration: 0.5 } };
+  const drawerExit = isMobile ? { opacity: 0, y: "100%", transition: { duration: 0.45 } } : { opacity: 0, x: "-100%", transition: { duration: 0.45 } };
+
+  // Set initial plan/template if provided
+  useEffect(() => {
+    if (initialPlanId) setSelectedPlanId(initialPlanId);
+    if (initialTemplateId) {
+      // If you have a setTemplateId in your store, call it here
+      // useTemplateStore.getState().setSelectedId(initialTemplateId);
+    }
+  }, [initialPlanId, initialTemplateId]);
 
   return (
-    <>
-      {open && (
-        <div className="fixed inset-0 z-50 pointer-events-auto">
-          <div className="absolute inset-0 bg-black/30" onClick={() => router.push("/templates")} />
+    <AnimatePresence>
+      {internalOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            className="fixed inset-0 z-40"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={backdropVariant}
+            transition={{ duration: 0.25 }}
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+            onClick={() => {
+              setInternalOpen(false);
+              onClose?.();
+            }}
+            aria-hidden
+          />
+          {/* Drawer panel */}
+          <motion.div
+            className="fixed z-50 top-0 left-0 h-screen w-full sm:w-full md:w-[45vw] lg:w-[45vw] flex items-center justify-center"
+            initial={drawerHidden}
+            animate={drawerVisible}
+            exit={drawerExit}
+          >
+            {/* Inner content wrapper: ensures content is centered and has the card sizing */}
+            <div
+              className={`
+                  relative
+                  bg-transparent
+                  w-full
+                  h-full
+                  flex
+                  items-center
+                  justify-center
+           
+                `}
+              // Prevent click on panel from closing the drawer
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* The actual stepper card */}
+              <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.25 }}
+                className="bg-white rounded-2xl shadow-xl w-full max-w-3xl h-screen sm:h-screen md:h-screen lg:h-screen p-6 "
+                style={{
+                 
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* Close button top-right */}
+                <div className="flex justify-end mb-2">
+                  <Button variant="ghost" onClick={() => setInternalOpen(false)}>
+                    Close
+                  </Button>
+                </div>
 
-          {/* Mobile: bottom sheet */}
-          <div className={`fixed left-0 bottom-0 w-full bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
-            open ? "translate-y-0" : "translate-y-full"
-          } h-[60vh]`}>
-            <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Checkout</h3>
-              <button onClick={() => router.push("/templates")} aria-label="Close" className="p-2">
-                ×
-              </button>
-            </div>
-            <div className="p-4 h-full overflow-auto">
-              {step === 0 && (
-                <div className="space-y-4">
-                  <h4 className="text-md font-semibold">Choose a plan</h4>
-                  <div className="grid grid-cols-1 gap-3">
-                    {availablePlans.map((p) => {
-                      const price = interval === "quarterly" ? p.quarterly ?? p.monthly : p.monthly;
-                      return (
-                        <Card key={p.id} className="p-4 flex justify-between items-center">
-                          <div>
-                            <div className="font-bold">{p.name}</div>
-                            <div className="text-sm text-slate-600">₦{Math.round(price).toLocaleString()} / {interval}</div>
+                {/* Stepper content (your original UI) */}
+                <div className="h-full flex flex-col justify-center">
+                  {/* Stepper header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      {["Plan", "Details", "Payment"].map((label, i) => (
+                        <div key={label} className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              i <= step ? "bg-rose-600 text-white" : "bg-gray-200 text-gray-600"
+                            }`}
+                          >
+                            {i + 1}
                           </div>
-                          <div>
-                            <Button onClick={() => selectPlan(p)} className="mr-2">Select</Button>
-                          </div>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {step === 1 && (
-                <div className="space-y-4">
-                  <h4 className="text-md font-semibold">Your details</h4>
-                  <div className="grid grid-cols-1 gap-3">
-                    <input className="border p-2 rounded" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-                    <input className="border p-2 rounded" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                    <input className="border p-2 rounded" placeholder="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                  </div>
-                </div>
-              )}
-
-              {step === 2 && (
-                <div className="space-y-4">
-                  <h4 className="text-md font-semibold">Order summary</h4>
-                  <div className="border rounded p-3">
-                    <div className="flex justify-between">
-                      <div className="font-medium">Plan</div>
-                      <div>{selectedPlan ? selectedPlan.name : '—'}</div>
-                    </div>
-                    <div className="flex justify-between mt-2">
-                      <div className="text-sm text-slate-600">Interval</div>
-                      <div className="text-sm text-slate-700">{interval}</div>
-                    </div>
-                    <div className="flex justify-between mt-2">
-                      <div className="text-sm text-slate-600">Total</div>
-                      <div className="font-bold">₦{useCheckoutStore.getState().total ?? '—'}</div>
+                          <div className="hidden sm:block text-sm text-gray-700">{label}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  <div>
-                    {/* Render the existing CheckoutClient to handle payment if needed */}
-                    <CheckoutClient />
-                  </div>
-                </div>
-              )}
-            </div>
+                  {/* Card */}
+                  <div className="bg-white rounded-2xl shadow-md p-6">
+                    {step === 0 && (
+                      <div className="space-y-4">
+                        <h4 className="text-lg font-semibold">Choose a plan</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {(plans as PricePlan[]).map((p) => {
+                            const price = interval === "quarterly" ? (p.quarterly ?? p.monthly) : p.monthly;
+                            return (
+                              <label
+                                key={p.id}
+                                className={`border rounded-xl p-4 cursor-pointer flex flex-col justify-between ${
+                                  selectedPlanId === p.id ? "border-rose-500 bg-rose-50" : "border-gray-200"
+                                }`}
+                              >
+                                <div>
+                                  <div className="flex items-baseline gap-2">
+                                    <span className="text-xl font-bold">₦{Math.round(price).toLocaleString()}</span>
+                                    <span className="text-sm text-gray-500">/month</span>
+                                  </div>
+                                  <div className="text-sm text-gray-600 mt-2">{p.name}</div>
+                                </div>
+                                <input
+                                  type="radio"
+                                  name="plan"
+                                  checked={selectedPlanId === p.id}
+                                  onChange={() => setSelectedPlanId(p.id)}
+                                  className="mt-3 self-end"
+                                />
+                              </label>
+                            );
+                          })}
+                        </div>
 
-            <div className="p-4 border-t flex items-center justify-between">
-              <div>
-                {step > 0 && (
-                  <Button variant="ghost" onClick={back} className="mr-2">Back</Button>
-                )}
-              </div>
-              <div>
-                {step < 2 ? (
-                  <Button onClick={next}>{step === 0 ? 'Continue' : 'Review order'}</Button>
-                ) : (
-                  <Button onClick={() => alert('Proceeding to payment...')}>Confirm & Pay</Button>
-                )}
-              </div>
-            </div>
-          </div>
+                        <div className="flex justify-end gap-3 mt-4">
+                          <Button onClick={() => setStep(1)} disabled={!selectedPlanId}>
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
-          {/* Desktop: right panel (slides in from right) */}
-          <div className={`hidden md:block fixed top-0 right-0 h-full w-2/5 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${
-            open ? 'translate-x-0' : 'translate-x-full'
-          }`}>
-            <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Checkout</h3>
-              <button onClick={() => router.push('/templates')} aria-label="Close" className="p-2">×</button>
-            </div>
+                    {step === 1 && (
+                      <div className="space-y-4">
+                        <h4 className="text-lg font-semibold">Your details</h4>
+                        <div className="grid grid-cols-1 gap-3">
+                          <input
+                            value={name || ""}
+                            onChange={(e) => setField?.("name", e.target.value)}
+                            placeholder="Full name"
+                            className="input p-3 border rounded"
+                          />
+                          <input
+                            value={email || ""}
+                            onChange={(e) => setField?.("email", e.target.value)}
+                            placeholder="Email"
+                            className="input p-3 border rounded"
+                          />
 
-            <div className="p-6 h-full overflow-auto flex flex-col">
-              <div className="flex-1">
-                {step === 0 && (
-                  <div className="space-y-6">
-                    <h4 className="text-lg font-semibold">Choose a plan</h4>
-                    <div className="grid grid-cols-1 gap-4">
-                      {availablePlans.map((p) => {
-                        const price = interval === "quarterly" ? p.quarterly ?? p.monthly : p.monthly;
-                        const selected = p.id === planId;
-                        return (
-                          <Card key={p.id} className={`p-4 flex justify-between items-center ${selected ? 'ring-2 ring-[#b23b44]/30' : ''}`}>
+                          <label
+                            className={`flex items-center justify-between rounded-lg border p-3 ${
+                              domainAdded ? "border-rose-500 bg-rose-50" : "border-gray-200"
+                            }`}
+                          >
                             <div>
-                              <div className="font-bold">{p.name}</div>
-                              <div className="text-sm text-slate-600">₦{Math.round(price).toLocaleString()} / {interval}</div>
+                              <div className="font-medium">Add custom domain (one-off)</div>
+                              <div className="text-sm text-gray-500">{formatNaira(DOMAIN_COST)}</div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              {selected && <Check className="w-5 h-5 text-[#b23b44]" />}
-                              <Button onClick={() => selectPlan(p)}>Select</Button>
-                            </div>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                            <input
+                              type="checkbox"
+                              checked={domainAdded}
+                              onChange={(e) => setDomainAdded?.(e.target.checked)}
+                              className="w-5 h-5 accent-rose-500"
+                            />
+                          </label>
+                        </div>
 
-                {step === 1 && (
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold">Your details</h4>
-                    <div className="grid grid-cols-1 gap-3">
-                      <input className="border p-3 rounded" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-                      <input className="border p-3 rounded" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                      <input className="border p-3 rounded" placeholder="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                    </div>
-                  </div>
-                )}
-
-                {step === 2 && (
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold">Order summary</h4>
-                    <div className="border rounded p-4">
-                      <div className="flex justify-between">
-                        <div className="font-medium">Plan</div>
-                        <div>{selectedPlan ? selectedPlan.name : '—'}</div>
+                        <div className="flex justify-between mt-4">
+                          <Button variant="ghost" onClick={() => setStep(0)}>
+                            Back
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              if (selectedPlanId) {
+                                setChoice?.(useTemplateStore.getState().selectedId || "", selectedPlanId, interval as any);
+                                setTotal?.(isQuarterly ? planPrice * 3 : planPrice + (domainAdded ? DOMAIN_COST : 0));
+                              }
+                              setStep(2);
+                            }}
+                          >
+                            Proceed to Payment
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex justify-between mt-2">
-                        <div className="text-sm text-slate-600">Interval</div>
-                        <div className="text-sm text-slate-700">{interval}</div>
-                      </div>
-                      <div className="flex justify-between mt-2">
-                        <div className="text-sm text-slate-600">Total</div>
-                        <div className="font-bold">₦{useCheckoutStore.getState().total ?? '—'}</div>
-                      </div>
-                    </div>
+                    )}
 
-                    <div>
-                      <CheckoutClient />
-                    </div>
+                    {step === 2 && (
+                      <div className="space-y-4">
+                        <h4 className="text-lg font-semibold">Confirm & Pay</h4>
+
+                        <div className="p-4 rounded-lg border bg-gray-50">
+                          <div className="flex justify-between">
+                            <span>Plan</span>
+                            <strong>{selectedPlan?.name ?? "-"}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Billed</span>
+                            <strong>{isQuarterly ? "Quarterly" : interval}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Domain</span>
+                            <strong>{domainAdded ? formatNaira(DOMAIN_COST) : "None"}</strong>
+                          </div>
+                          <div className="flex justify-between mt-2 text-lg">
+                            <span>Total</span>
+                            <strong>{formatNaira(totalAmount)}</strong>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between mt-4">
+                          <Button variant="ghost" onClick={() => setStep(1)}>
+                            Back
+                          </Button>
+                          <Button onClick={proceedToPayment} disabled={loading}>
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Pay ${formatNaira(totalAmount)}`}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-
-              <div className="border-t p-4 flex justify-between">
-                <div>
-                  {step > 0 && (
-                    <Button variant="ghost" onClick={back} className="mr-2">Back</Button>
-                  )}
                 </div>
-                <div>
-                  {step < 2 ? (
-                    <Button onClick={next}>{step === 0 ? 'Continue' : 'Review order'}</Button>
-                  ) : (
-                    <Button onClick={() => alert('Proceeding to payment...')}>Confirm & Pay</Button>
-                  )}
-                </div>
-              </div>
+              </motion.div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </>
       )}
-    </>
+    </AnimatePresence>
   );
 }
+
+export default CheckoutStepper;
