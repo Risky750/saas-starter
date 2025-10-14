@@ -32,31 +32,18 @@ export function CheckoutStepper({
   const router = useRouter();
 
   const { selectedPreview } = useTemplateStore();
-  const { plans, interval: storeInterval, setInterval: setStoreInterval } = usePricingStore();
+  const { plans, interval } = usePricingStore();
   const { name, email, setField } = useRegisterStore();
-  const { domainAdded: storeDomainAdded, setDomainAdded: setStoreDomainAdded, setChoice, setTotal } =
-    useCheckoutStore();
+  const { domainAdded, setDomainAdded, setChoice, setTotal } = useCheckoutStore();
   const snap = useCheckoutSnapshot();
 
-  // Steps: 0 = Plans, 1 = Details, 2 = Summary/Payment
   const [step, setStep] = useState<number>(0);
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(snap.planId || initialPlanId || null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(snap.planId || null);
   const [loading, setLoading] = useState(false);
   const paymentCompletedRef = useRef(false);
-
-  // Local UI interval mirrors store interval so we can change it here
-  const [interval, setIntervalLocal] = useState<"monthly" | "quarterly">(
-    (storeInterval as "monthly" | "quarterly") ?? "monthly"
-  );
-
-  // domain controls
-  const [domainAdded, setDomainAddedLocal] = useState<boolean>(snap.domainAdded ?? !!storeDomainAdded);
-  const [domainName, setDomainName] = useState<string>("");
-
-  // Drawer open state
   const [internalOpen, setInternalOpen] = useState<boolean>(open);
 
-  // Responsive breakpoint: mobile if <768px
+  // Responsive check
   const [isMobile, setIsMobile] = useState<boolean>(
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
@@ -71,108 +58,58 @@ export function CheckoutStepper({
     };
   }, []);
 
-  // keep local internalOpen in sync with parent
-  useEffect(() => {
-    setInternalOpen(open);
-  }, [open]);
+  useEffect(() => setInternalOpen(open), [open]);
 
-  // prevent background scroll when overlay open
   useEffect(() => {
     const prev = typeof document !== "undefined" ? document.body.style.overflow : "";
-    if (internalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = prev;
-    }
+    if (internalOpen) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = prev;
     return () => {
       if (typeof document !== "undefined") document.body.style.overflow = prev;
     };
   }, [internalOpen]);
 
-  // Accept initial template/plan and set step accordingly
+  useEffect(() => {
+    if (initialTemplateId) localStorage.removeItem("previewed_demo_template");
+  }, [initialTemplateId]);
+
   useEffect(() => {
     if (initialPlanId) {
       setSelectedPlanId(initialPlanId);
-      setStep(1); // if plan provided start at Details
-    } else if (initialTemplateId) {
-      setStep(0); // template provided but no plan -> start at Plans
-    } else if (snap.planId) {
+      setStep(1);
+    } else if (initialTemplateId) setStep(0);
+    else if (snap.planId) {
       setSelectedPlanId(snap.planId);
       setStep(1);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPlanId, initialTemplateId]);
 
-  // clear demo flag if initialTemplateId present
-  useEffect(() => {
-    if (initialTemplateId && typeof window !== "undefined") {
-      try {
-        localStorage.removeItem("previewed_demo_template");
-      } catch (e) {}
-    }
-  }, [initialTemplateId]);
-
-  // hydrate from snapshot
-  useEffect(() => {
-    if (snap.templateId) setChoice?.(snap.templateId, snap.planId || "basic", storeInterval as any);
-    if (typeof snap.total === "number") setTotal?.(snap.total);
-    if (snap.planId) setSelectedPlanId(snap.planId);
-    if (typeof snap.domainAdded === "boolean") setDomainAddedLocal(snap.domainAdded);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ensure store interval and local interval stay in sync; when local changes update store
-  useEffect(() => {
-    if (interval !== storeInterval) {
-      try {
-        setStoreInterval?.(interval);
-      } catch (e) {}
-    }
-    // handle quarterly auto domain behavior: quarterly gets free domain
-    if (interval === "quarterly") {
-      setDomainAddedLocal(true);
-      try {
-        setStoreDomainAdded?.(true);
-      } catch (e) {}
-    } else {
-      // keep domainAdded as-is (user can toggle)
-      try {
-        setStoreDomainAdded?.(domainAdded);
-      } catch (e) {}
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [interval]);
-
-  // when domainAdded local toggles, reflect to store (if monthly)
-  useEffect(() => {
-    try {
-      setStoreDomainAdded?.(domainAdded);
-    } catch (e) {}
-  }, [domainAdded, setStoreDomainAdded]);
-
-  // compute selected plan details
   const selectedPlan = useMemo(
     () => (plans as PricePlan[]).find((p) => p.id === selectedPlanId),
     [plans, selectedPlanId]
   ) as PricePlan | undefined;
 
-  // price per billing unit (monthly price or quarterly price-per-month equivalent)
-  const unitPrice = useMemo(() => {
-    if (!selectedPlan) return 0;
-    if (interval === "quarterly") {
-      // treat quarterly as displayed per-month figure (we'll multiply later)
-      return (selectedPlan as any).quarterly ?? selectedPlan.monthly;
-    }
-    return selectedPlan.monthly;
-  }, [selectedPlan, interval]);
+  const planPrice = selectedPlan
+    ? interval === "quarterly"
+      ? (selectedPlan as any).quarterly || selectedPlan.monthly
+      : selectedPlan.monthly
+    : 0;
 
   const isQuarterly = interval === "quarterly";
-  const subtotal = isQuarterly ? unitPrice * 3 : unitPrice;
-  // If quarterly: domain is free (we reflect as free). If monthly and domainAdded true -> add cost.
-  const domainCharge = isQuarterly ? 0 : domainAdded ? DOMAIN_COST : 0;
-  const totalAmount = Math.max(0, subtotal + domainCharge);
+  const subtotal = isQuarterly ? planPrice * 3 : planPrice;
+  const totalAmount = isQuarterly ? subtotal : subtotal + (domainAdded ? DOMAIN_COST : 0);
 
-  // monnify loader
+  useEffect(() => {
+    if (snap.templateId) setChoice?.(snap.templateId, snap.planId || "basic", interval as any);
+    if (snap.total) setTotal?.(snap.total);
+    if (snap.planId) setSelectedPlanId(snap.planId);
+  }, []);
+
+  // Reset domain if switching to quarterly
+  useEffect(() => {
+    if (interval === "quarterly") setDomainAdded?.(false);
+  }, [interval, setDomainAdded]);
+
   useEffect(() => {
     if (!(window as any).MonnifySDK) {
       const script = document.createElement("script");
@@ -182,29 +119,20 @@ export function CheckoutStepper({
     }
   }, []);
 
-  const sanitizeEnv = (v?: string) => {
-    if (!v) return "";
-    return v.replace(/^\s*\"(.*)\"\s*$/, "$1");
-  };
+  const sanitizeEnv = (v?: string) => (!v ? "" : v.replace(/^\s*\"(.*)\"\s*$/, "$1"));
 
   const proceedToPayment = async () => {
-    // validate
     if (!name || !email) {
       alert("Please enter your name and email before paying");
       return;
     }
-    if (!selectedPlan) {
-      alert("Please select a plan before proceeding");
-      return;
-    }
 
     setLoading(true);
-
     const amountToPay = Math.max(1, Number((totalAmount || 0).toFixed(2)));
     try {
       setChoice?.(useTemplateStore.getState().selectedId || "", selectedPlanId || "basic", interval as any);
       setTotal?.(amountToPay);
-    } catch (e) {}
+    } catch {}
 
     const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
     const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
@@ -227,15 +155,10 @@ export function CheckoutStepper({
         contractCode,
         baseUrl: baseUrl || undefined,
         paymentDescription: `${selectedPlan?.name ?? "Plan"} - ${isQuarterly ? "Quarterly" : "Monthly"}`,
-        metadata: {
-          planId: selectedPlan?.id,
-          interval,
-          domainAdded,
-          domainName: domainAdded ? domainName : undefined,
-        },
+        metadata: { planId: selectedPlan?.id, interval, domainAdded },
         onLoadStart: () => setLoading(true),
         onLoadComplete: () => setLoading(false),
-        onComplete: (res: any) => {
+        onComplete: () => {
           paymentCompletedRef.current = true;
           setLoading(false);
           setInternalOpen(false);
@@ -254,7 +177,6 @@ export function CheckoutStepper({
     }
   };
 
-  // Close on ESC
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -267,40 +189,23 @@ export function CheckoutStepper({
   }, [internalOpen, onClose]);
 
   // Motion variants
-  const backdropVariant = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-  };
-
-  // drawer: desktop slide from RIGHT (x: "100%"), mobile slide from bottom (y: "100%")
+  const backdropVariant = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
   const drawerHidden = isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, x: "100%" };
   const drawerVisible = { opacity: 1, x: 0, y: 0, transition: { duration: 0.45 } };
   const drawerExit = isMobile
     ? { opacity: 0, y: "100%", transition: { duration: 0.4 } }
     : { opacity: 0, x: "100%", transition: { duration: 0.4 } };
 
-  // Back to templates handler
   const handleBackToTemplates = () => {
-    try {
-      setInternalOpen(false);
-      onClose?.();
-      router.push("/templates");
-    } catch (e) {
-      router.push("/templates");
-    }
-  };
-
-  // helper: when user clicks "Get Started" from pricing page we call setChoice & setTotal elsewhere
-  // but inside stepper we also set them before payment
-  const handleIntervalToggle = (val: "monthly" | "quarterly") => {
-    setIntervalLocal(val);
+    setInternalOpen(false);
+    onClose?.();
+    router.push("/templates");
   };
 
   return (
     <AnimatePresence>
       {internalOpen && (
         <>
-          {/* Backdrop with blur */}
           <motion.div
             className="fixed inset-0 z-40"
             initial="hidden"
@@ -315,19 +220,16 @@ export function CheckoutStepper({
             }}
             aria-hidden
           />
-          {/* Drawer panel */}
           <motion.div
             className="fixed z-50 top-0 right-0 h-screen w-full sm:w-full md:w-[45vw] lg:w-[45vw] flex items-center justify-center"
             initial={drawerHidden}
             animate={drawerVisible}
             exit={drawerExit}
           >
-            {/* Inner content wrapper */}
             <div
               className="relative bg-transparent w-full h-full flex items-center justify-center"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* The actual stepper card */}
               <motion.div
                 layout
                 initial={{ opacity: 0, scale: 0.98 }}
@@ -335,9 +237,7 @@ export function CheckoutStepper({
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.25 }}
                 className="bg-white shadow-xl w-full max-w-3xl h-screen sm:h-screen md:h-screen lg:h-screen p-6 overflow-auto"
-                style={{ boxSizing: "border-box" }}
               >
-                {/* Header: Back to templates + step labels + interval toggle */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
                     <button
@@ -362,31 +262,12 @@ export function CheckoutStepper({
                       ))}
                     </div>
                   </div>
-
-                  {/* interval toggle */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleIntervalToggle("quarterly")}
-                      className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
-                        interval === "quarterly" ? "bg-[#b23b44] text-white" : "bg-white text-[#6e5659] border"
-                      }`}
-                    >
-                      Quarterly
-                    </button>
-                    <button
-                      onClick={() => handleIntervalToggle("monthly")}
-                      className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
-                        interval === "monthly" ? "bg-[#b23b44] text-white" : "bg-white text-[#6e5659] border"
-                      }`}
-                    >
-                      Monthly
-                    </button>
-                  </div>
+                  <div className="sm:hidden text-sm text-gray-700">Step {step + 1} / 3</div>
                 </div>
 
-                {/* Content */}
                 <div className="h-full flex flex-col justify-center">
                   <div className="bg-white rounded-2xl shadow-md p-6">
+                    {/* Step 0: Plans */}
                     {step === 0 && (
                       <div className="space-y-4">
                         <h4 className="text-lg font-semibold">Choose a plan</h4>
@@ -418,7 +299,6 @@ export function CheckoutStepper({
                             );
                           })}
                         </div>
-
                         <div className="flex justify-end gap-3 mt-4">
                           <Button onClick={() => setStep(1)} disabled={!selectedPlanId}>
                             Next
@@ -427,6 +307,7 @@ export function CheckoutStepper({
                       </div>
                     )}
 
+                    {/* Step 1: Details */}
                     {step === 1 && (
                       <div className="space-y-4">
                         <h4 className="text-lg font-semibold">Your details</h4>
@@ -444,46 +325,25 @@ export function CheckoutStepper({
                             className="input p-3 border rounded"
                           />
 
-                          {/* Domain toggle / input */}
-                          <label
-                            className={`flex flex-col gap-2 rounded-lg border p-3 ${
-                              domainAdded ? "border-rose-500 bg-rose-50" : "border-gray-200"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
+                          {/* Domain only visible for Monthly */}
+                          {interval === "monthly" && (
+                            <label
+                              className={`flex items-center justify-between rounded-lg border p-3 ${
+                                domainAdded ? "border-rose-500 bg-rose-50" : "border-gray-200"
+                              }`}
+                            >
                               <div>
                                 <div className="font-medium">Add custom domain (one-off)</div>
-                                <div className="text-sm text-gray-500">
-                                  {isQuarterly
-                                    ? `Free with quarterly (${formatNaira(DOMAIN_COST)})`
-                                    : `${formatNaira(DOMAIN_COST)} one-time`}
-                                </div>
+                                <div className="text-sm text-gray-500">{formatNaira(DOMAIN_COST)}</div>
                               </div>
                               <input
                                 type="checkbox"
                                 checked={domainAdded}
-                                onChange={(e) => {
-                                  // if quarterly, keep true
-                                  if (isQuarterly) {
-                                    setDomainAddedLocal(true);
-                                  } else {
-                                    setDomainAddedLocal(e.target.checked);
-                                  }
-                                }}
+                                onChange={(e) => setDomainAdded?.(e.target.checked)}
                                 className="w-5 h-5 accent-rose-500"
                               />
-                            </div>
-
-                            {/* domain input only when domain added (and allow editing name) */}
-                            {domainAdded && (
-                              <input
-                                placeholder="yourdomain.com"
-                                value={domainName}
-                                onChange={(e) => setDomainName(e.target.value)}
-                                className="mt-2 p-2 border rounded"
-                              />
-                            )}
-                          </label>
+                            </label>
+                          )}
                         </div>
 
                         <div className="flex justify-between mt-4">
@@ -493,8 +353,12 @@ export function CheckoutStepper({
                           <Button
                             onClick={() => {
                               if (selectedPlanId) {
-                                setChoice?.(useTemplateStore.getState().selectedId || "", selectedPlanId, interval as any);
-                                setTotal?.(isQuarterly ? unitPrice * 3 : unitPrice + (domainAdded ? DOMAIN_COST : 0));
+                                setChoice?.(
+                                  useTemplateStore.getState().selectedId || "",
+                                  selectedPlanId,
+                                  interval as any
+                                );
+                                setTotal?.(isQuarterly ? planPrice * 3 : planPrice + (domainAdded ? DOMAIN_COST : 0));
                               }
                               setStep(2);
                             }}
@@ -505,10 +369,10 @@ export function CheckoutStepper({
                       </div>
                     )}
 
+                    {/* Step 2: Summary */}
                     {step === 2 && (
                       <div className="space-y-4">
                         <h4 className="text-lg font-semibold">Confirm & Pay</h4>
-
                         <div className="p-4 rounded-lg border bg-gray-50">
                           <div className="flex justify-between">
                             <span>Plan</span>
@@ -520,19 +384,9 @@ export function CheckoutStepper({
                           </div>
                           <div className="flex justify-between">
                             <span>Domain</span>
-                            <strong>{domainAdded ? domainName || formatNaira(DOMAIN_COST) : "None"}</strong>
+                            <strong>{interval === "monthly" && domainAdded ? formatNaira(DOMAIN_COST) : "None"}</strong>
                           </div>
-
                           <div className="flex justify-between mt-2 text-lg">
-                            <span>Subtotal</span>
-                            <strong>{formatNaira(subtotal)}</strong>
-                          </div>
-                          <div className="flex justify-between text-sm text-gray-500">
-                            <span>Domain charge</span>
-                            <strong>{domainCharge > 0 ? formatNaira(domainCharge) : "Free"}</strong>
-                          </div>
-
-                          <div className="flex justify-between mt-2 text-xl">
                             <span>Total</span>
                             <strong>{formatNaira(totalAmount)}</strong>
                           </div>
