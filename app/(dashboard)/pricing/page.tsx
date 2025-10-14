@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import React, { useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +15,6 @@ import { Check } from "lucide-react";
 import { defaultPlans } from "@/lib/defaultPlans";
 import { ChevronLeft } from "lucide-react";
 import { Router } from "next/router";
-import dynamic from "next/dynamic";
 
 const CheckoutStepper = dynamic(() => import("@/components/checkout/CheckoutStepper").then(m => m.CheckoutStepper), { ssr: false });
 
@@ -119,7 +120,7 @@ export default function PricingPage() {
               // mark that the user previewed this template from the demo flow
               localStorage.setItem('previewed_demo_template', namePart);
             } catch (e) {}
-          //  window.open(url);
+          window.open(url);
           }}
           className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"
         >
