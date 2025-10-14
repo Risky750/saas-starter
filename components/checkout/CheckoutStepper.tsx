@@ -227,19 +227,13 @@ export function CheckoutStepper({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.25 }}
-                className="bg-white rounded-2xl shadow-xl w-full max-w-3xl h-screen sm:h-screen md:h-screen lg:h-screen p-6 "
+                className="bg-white  shadow-xl w-full max-w-3xl h-screen sm:h-screen md:h-screen lg:h-screen p-6 "
                 style={{
                  
                   boxSizing: "border-box",
                 }}
               >
-                {/* Close button top-right */}
-                <div className="flex justify-end mb-2">
-                  <Button variant="ghost" onClick={() => setInternalOpen(false)}>
-                    Close
-                  </Button>
-                </div>
-
+          
                 {/* Stepper content (your original UI) */}
                 <div className="h-full flex flex-col justify-center">
                   {/* Stepper header */}

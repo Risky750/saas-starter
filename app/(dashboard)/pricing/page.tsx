@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-import React, { useEffect, useMemo } from "react";
+import React, { Suspense, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -17,13 +17,14 @@ import { ChevronLeft } from "lucide-react";
 import { Router } from "next/router";
 
 const CheckoutStepper = dynamic(() => import("@/components/checkout/CheckoutStepper").then(m => m.CheckoutStepper), { ssr: false });
+const PricingOverlayLauncher = dynamic(() => import("@/components/checkout/PricingOverlayLauncher").then(m => m.default), { ssr: false });
 
 export default function PricingPage() {
   const router = useRouter();
   const { selectedId, selectedPreview, category } = useTemplateStore();
   const { setChoice, setTotal } = useCheckoutStore();
   const { plans: storedPlans, setPlans, interval, setInterval } = usePricingStore();
-  const search = useSearchParams();
+  // NOTE: search params are read in a client-only component (`PricingOverlayLauncher`) to avoid build-time CSR bailout.
 
   useEffect(() => {
     if (storedPlans.length === 0) setPlans(defaultPlans);
@@ -79,10 +80,7 @@ export default function PricingPage() {
     );
   };
 
-  // Overlay logic
-  const overlay = search.get("overlay");
-  const planQuery = search.get("plan");
-  const templateQuery = search.get("template");
+  // Overlay launcher is rendered below inside a Suspense boundary
 
   return (
     <section className="bg-[#f5f2f0] w-full flex justify-center items-start px-4 py-8 h-screen">
@@ -199,14 +197,9 @@ export default function PricingPage() {
     </div>
   </div>
 
-  {overlay === "checkout2" && (
-        <CheckoutStepper
-          open
-          initialPlanId={planQuery || undefined}
-          initialTemplateId={templateQuery || undefined}
-          onClose={() => router.push("/pricing")}
-        />
-      )}
+  <Suspense fallback={null}>
+    <PricingOverlayLauncher />
+  </Suspense>
 </section>
   );
 }
