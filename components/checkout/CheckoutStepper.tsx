@@ -384,7 +384,7 @@ export function CheckoutStepper({
                           </div>
                           <div className="flex justify-between">
                             <span>Domain</span>
-                            <strong>{interval === "monthly" && domainAdded ? formatNaira(DOMAIN_COST) : "None"}</strong>
+                            <strong>{interval === "monthly" && domainAdded ? formatNaira(DOMAIN_COST) : "Added"}</strong>
                           </div>
                           <div className="flex justify-between mt-2 text-lg">
                             <span>Total</span>
