@@ -32,18 +32,28 @@ export function CheckoutStepper({
   const router = useRouter();
 
   const { selectedPreview } = useTemplateStore();
-  const { plans, interval } = usePricingStore();
+  const { plans, interval: storeInterval, setInterval: setStoreInterval } = usePricingStore();
   const { name, email, setField } = useRegisterStore();
-  const { domainAdded, setDomainAdded, setChoice, setTotal } = useCheckoutStore();
+  const { domainAdded: storeDomainAdded, setDomainAdded: setStoreDomainAdded, setChoice, setTotal } =
+    useCheckoutStore();
   const snap = useCheckoutSnapshot();
 
-  // 0 = Plans, 1 = Details, 2 = Summary/Payment
+  // Steps: 0 = Plans, 1 = Details, 2 = Summary/Payment
   const [step, setStep] = useState<number>(0);
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(snap.planId || null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(snap.planId || initialPlanId || null);
   const [loading, setLoading] = useState(false);
   const paymentCompletedRef = useRef(false);
 
-  // Drawer open state (internal)
+  // Local UI interval mirrors store interval so we can change it here
+  const [interval, setIntervalLocal] = useState<"monthly" | "quarterly">(
+    (storeInterval as "monthly" | "quarterly") ?? "monthly"
+  );
+
+  // domain controls
+  const [domainAdded, setDomainAddedLocal] = useState<boolean>(snap.domainAdded ?? !!storeDomainAdded);
+  const [domainName, setDomainName] = useState<string>("");
+
+  // Drawer open state
   const [internalOpen, setInternalOpen] = useState<boolean>(open);
 
   // Responsive breakpoint: mobile if <768px
@@ -61,12 +71,12 @@ export function CheckoutStepper({
     };
   }, []);
 
-  // Keep internalOpen in sync if parent toggles `open`
+  // keep local internalOpen in sync with parent
   useEffect(() => {
     setInternalOpen(open);
   }, [open]);
 
-  // Prevent body scroll while overlay is open
+  // prevent background scroll when overlay open
   useEffect(() => {
     const prev = typeof document !== "undefined" ? document.body.style.overflow : "";
     if (internalOpen) {
@@ -79,26 +89,13 @@ export function CheckoutStepper({
     };
   }, [internalOpen]);
 
-  // If an initialTemplateId is provided (demo return), we clear persisted flag
-  useEffect(() => {
-    if (initialTemplateId) {
-      try {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("previewed_demo_template");
-        }
-      } catch (e) {}
-    }
-  }, [initialTemplateId]);
-
-  // Accept initialPlanId (preselect plan) or start at Plans if none
+  // Accept initial template/plan and set step accordingly
   useEffect(() => {
     if (initialPlanId) {
       setSelectedPlanId(initialPlanId);
-      // If plan exists on open, start at Details step
-      setStep(1);
+      setStep(1); // if plan provided start at Details
     } else if (initialTemplateId) {
-      // If a template was supplied but no plan, start at Plans step
-      setStep(0);
+      setStep(0); // template provided but no plan -> start at Plans
     } else if (snap.planId) {
       setSelectedPlanId(snap.planId);
       setStep(1);
@@ -106,30 +103,76 @@ export function CheckoutStepper({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPlanId, initialTemplateId]);
 
+  // clear demo flag if initialTemplateId present
+  useEffect(() => {
+    if (initialTemplateId && typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("previewed_demo_template");
+      } catch (e) {}
+    }
+  }, [initialTemplateId]);
+
+  // hydrate from snapshot
+  useEffect(() => {
+    if (snap.templateId) setChoice?.(snap.templateId, snap.planId || "basic", storeInterval as any);
+    if (typeof snap.total === "number") setTotal?.(snap.total);
+    if (snap.planId) setSelectedPlanId(snap.planId);
+    if (typeof snap.domainAdded === "boolean") setDomainAddedLocal(snap.domainAdded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ensure store interval and local interval stay in sync; when local changes update store
+  useEffect(() => {
+    if (interval !== storeInterval) {
+      try {
+        setStoreInterval?.(interval);
+      } catch (e) {}
+    }
+    // handle quarterly auto domain behavior: quarterly gets free domain
+    if (interval === "quarterly") {
+      setDomainAddedLocal(true);
+      try {
+        setStoreDomainAdded?.(true);
+      } catch (e) {}
+    } else {
+      // keep domainAdded as-is (user can toggle)
+      try {
+        setStoreDomainAdded?.(domainAdded);
+      } catch (e) {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interval]);
+
+  // when domainAdded local toggles, reflect to store (if monthly)
+  useEffect(() => {
+    try {
+      setStoreDomainAdded?.(domainAdded);
+    } catch (e) {}
+  }, [domainAdded, setStoreDomainAdded]);
+
+  // compute selected plan details
   const selectedPlan = useMemo(
     () => (plans as PricePlan[]).find((p) => p.id === selectedPlanId),
     [plans, selectedPlanId]
   ) as PricePlan | undefined;
 
-  const planPrice = selectedPlan
-    ? interval === "quarterly"
-      ? (selectedPlan as any).quarterly || selectedPlan.monthly
-      : selectedPlan.monthly
-    : 0;
+  // price per billing unit (monthly price or quarterly price-per-month equivalent)
+  const unitPrice = useMemo(() => {
+    if (!selectedPlan) return 0;
+    if (interval === "quarterly") {
+      // treat quarterly as displayed per-month figure (we'll multiply later)
+      return (selectedPlan as any).quarterly ?? selectedPlan.monthly;
+    }
+    return selectedPlan.monthly;
+  }, [selectedPlan, interval]);
 
   const isQuarterly = interval === "quarterly";
-  const subtotal = isQuarterly ? planPrice * 3 : planPrice;
-  const totalAmount = isQuarterly ? subtotal : subtotal + (domainAdded ? DOMAIN_COST : 0);
+  const subtotal = isQuarterly ? unitPrice * 3 : unitPrice;
+  // If quarterly: domain is free (we reflect as free). If monthly and domainAdded true -> add cost.
+  const domainCharge = isQuarterly ? 0 : domainAdded ? DOMAIN_COST : 0;
+  const totalAmount = Math.max(0, subtotal + domainCharge);
 
-  // hydrate persisted checkout snapshot if present
-  useEffect(() => {
-    if (snap.templateId) setChoice?.(snap.templateId, snap.planId || "basic", interval as any);
-    if (snap.total) setTotal?.(snap.total);
-    if (snap.planId) setSelectedPlanId(snap.planId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Load Monnify SDK defensively
+  // monnify loader
   useEffect(() => {
     if (!(window as any).MonnifySDK) {
       const script = document.createElement("script");
@@ -145,8 +188,13 @@ export function CheckoutStepper({
   };
 
   const proceedToPayment = async () => {
+    // validate
     if (!name || !email) {
       alert("Please enter your name and email before paying");
+      return;
+    }
+    if (!selectedPlan) {
+      alert("Please select a plan before proceeding");
       return;
     }
 
@@ -183,6 +231,7 @@ export function CheckoutStepper({
           planId: selectedPlan?.id,
           interval,
           domainAdded,
+          domainName: domainAdded ? domainName : undefined,
         },
         onLoadStart: () => setLoading(true),
         onLoadComplete: () => setLoading(false),
@@ -233,13 +282,18 @@ export function CheckoutStepper({
   // Back to templates handler
   const handleBackToTemplates = () => {
     try {
-      // keep stores as-is; just navigate away
       setInternalOpen(false);
       onClose?.();
       router.push("/templates");
     } catch (e) {
       router.push("/templates");
     }
+  };
+
+  // helper: when user clicks "Get Started" from pricing page we call setChoice & setTotal elsewhere
+  // but inside stepper we also set them before payment
+  const handleIntervalToggle = (val: "monthly" | "quarterly") => {
+    setIntervalLocal(val);
   };
 
   return (
@@ -283,7 +337,7 @@ export function CheckoutStepper({
                 className="bg-white shadow-xl w-full max-w-3xl h-screen sm:h-screen md:h-screen lg:h-screen p-6 overflow-auto"
                 style={{ boxSizing: "border-box" }}
               >
-                {/* Header: Back to templates + step labels */}
+                {/* Header: Back to templates + step labels + interval toggle */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
                     <button
@@ -308,7 +362,26 @@ export function CheckoutStepper({
                       ))}
                     </div>
                   </div>
-                  <div className="sm:hidden text-sm text-gray-700">Step {step + 1} / 3</div>
+
+                  {/* interval toggle */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleIntervalToggle("quarterly")}
+                      className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
+                        interval === "quarterly" ? "bg-[#b23b44] text-white" : "bg-white text-[#6e5659] border"
+                      }`}
+                    >
+                      Quarterly
+                    </button>
+                    <button
+                      onClick={() => handleIntervalToggle("monthly")}
+                      className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
+                        interval === "monthly" ? "bg-[#b23b44] text-white" : "bg-white text-[#6e5659] border"
+                      }`}
+                    >
+                      Monthly
+                    </button>
+                  </div>
                 </div>
 
                 {/* Content */}
@@ -371,21 +444,45 @@ export function CheckoutStepper({
                             className="input p-3 border rounded"
                           />
 
+                          {/* Domain toggle / input */}
                           <label
-                            className={`flex items-center justify-between rounded-lg border p-3 ${
+                            className={`flex flex-col gap-2 rounded-lg border p-3 ${
                               domainAdded ? "border-rose-500 bg-rose-50" : "border-gray-200"
                             }`}
                           >
-                            <div>
-                              <div className="font-medium">Add custom domain (one-off)</div>
-                              <div className="text-sm text-gray-500">{formatNaira(DOMAIN_COST)}</div>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium">Add custom domain (one-off)</div>
+                                <div className="text-sm text-gray-500">
+                                  {isQuarterly
+                                    ? `Free with quarterly (${formatNaira(DOMAIN_COST)})`
+                                    : `${formatNaira(DOMAIN_COST)} one-time`}
+                                </div>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={domainAdded}
+                                onChange={(e) => {
+                                  // if quarterly, keep true
+                                  if (isQuarterly) {
+                                    setDomainAddedLocal(true);
+                                  } else {
+                                    setDomainAddedLocal(e.target.checked);
+                                  }
+                                }}
+                                className="w-5 h-5 accent-rose-500"
+                              />
                             </div>
-                            <input
-                              type="checkbox"
-                              checked={domainAdded}
-                              onChange={(e) => setDomainAdded?.(e.target.checked)}
-                              className="w-5 h-5 accent-rose-500"
-                            />
+
+                            {/* domain input only when domain added (and allow editing name) */}
+                            {domainAdded && (
+                              <input
+                                placeholder="yourdomain.com"
+                                value={domainName}
+                                onChange={(e) => setDomainName(e.target.value)}
+                                className="mt-2 p-2 border rounded"
+                              />
+                            )}
                           </label>
                         </div>
 
@@ -397,7 +494,7 @@ export function CheckoutStepper({
                             onClick={() => {
                               if (selectedPlanId) {
                                 setChoice?.(useTemplateStore.getState().selectedId || "", selectedPlanId, interval as any);
-                                setTotal?.(isQuarterly ? planPrice * 3 : planPrice + (domainAdded ? DOMAIN_COST : 0));
+                                setTotal?.(isQuarterly ? unitPrice * 3 : unitPrice + (domainAdded ? DOMAIN_COST : 0));
                               }
                               setStep(2);
                             }}
@@ -423,9 +520,19 @@ export function CheckoutStepper({
                           </div>
                           <div className="flex justify-between">
                             <span>Domain</span>
-                            <strong>{domainAdded ? formatNaira(DOMAIN_COST) : "None"}</strong>
+                            <strong>{domainAdded ? domainName || formatNaira(DOMAIN_COST) : "None"}</strong>
                           </div>
+
                           <div className="flex justify-between mt-2 text-lg">
+                            <span>Subtotal</span>
+                            <strong>{formatNaira(subtotal)}</strong>
+                          </div>
+                          <div className="flex justify-between text-sm text-gray-500">
+                            <span>Domain charge</span>
+                            <strong>{domainCharge > 0 ? formatNaira(domainCharge) : "Free"}</strong>
+                          </div>
+
+                          <div className="flex justify-between mt-2 text-xl">
                             <span>Total</span>
                             <strong>{formatNaira(totalAmount)}</strong>
                           </div>
