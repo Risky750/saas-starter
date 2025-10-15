@@ -77,7 +77,7 @@ export default function PricingPage() {
       typeof window !== "undefined" ? localStorage.getItem("previewed_demo_template") : null;
 
     if (previewFlag && previewFlag === namePart) {
-      router.push(`/pricing?overlay=checkout2&plan=${plan.id}&template=${encodeURIComponent(namePart)}`);
+      router.push(`/checkout2`);
       return;
     }
 
@@ -201,7 +201,7 @@ export default function PricingPage() {
                     onClick={() => selectPlan(plan)}
                     className="w-full py-3 rounded-full bg-[#b23b44] text-white font-bold shadow-sm hover:shadow-md transform hover:scale-105 transition-all duration-200"
                   >
-                    Get Started
+                  Select plan
                   </Button>
                 </Card>
               );
@@ -210,9 +210,9 @@ export default function PricingPage() {
         </div>
       </div>
 
-      <Suspense fallback={null}>
+      {/*<Suspense fallback={null}>
         <PricingOverlayLauncher />
-      </Suspense>
+      </Suspense>*/}
     </section>
   );
 }

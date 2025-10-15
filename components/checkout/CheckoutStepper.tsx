@@ -1,4 +1,3 @@
-// /components/checkout/Stepper.tsx
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -10,7 +9,6 @@ import { usePricingStore } from "@/stores/pricingStore";
 import { useRegisterStore } from "@/stores/registerStores";
 import { useCheckoutStore, useCheckoutSnapshot } from "@/stores/checkoutStore";
 import type { Plan as PricePlan } from "@/types/pricing";
-import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 
 const DOMAIN_COST = 7500;
@@ -188,14 +186,6 @@ export function CheckoutStepper({
     return () => window.removeEventListener("keydown", onKey);
   }, [internalOpen, onClose]);
 
-  // Motion variants
-  const backdropVariant = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
-  const drawerHidden = isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, x: "100%" };
-  const drawerVisible = { opacity: 1, x: 0, y: 0, transition: { duration: 0.45 } };
-  const drawerExit = isMobile
-    ? { opacity: 0, y: "100%", transition: { duration: 0.4 } }
-    : { opacity: 0, x: "100%", transition: { duration: 0.4 } };
-
   const handleBackToTemplates = () => {
     setInternalOpen(false);
     onClose?.();
@@ -203,47 +193,14 @@ export function CheckoutStepper({
   };
 
   return (
-    <AnimatePresence>
-      {internalOpen && (
-        <>
-          <motion.div
-            className="fixed inset-0 z-40"
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            variants={backdropVariant}
-            transition={{ duration: 0.25 }}
-            style={{ backgroundColor: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }}
-            onClick={() => {
-              setInternalOpen(false);
-              onClose?.();
-            }}
-            aria-hidden
-          />
-          <motion.div
-            className="fixed z-50 top-0 right-0 h-screen w-full sm:w-full md:w-[45vw] lg:w-[45vw] flex items-center justify-center"
-            initial={drawerHidden}
-            animate={drawerVisible}
-            exit={drawerExit}
-          >
-            <div
-              className="relative bg-transparent w-full h-full flex items-center justify-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <motion.div
-                layout
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.25 }}
-                className="bg-white shadow-xl w-full max-w-3xl h-screen sm:h-screen md:h-screen lg:h-screen p-6 overflow-auto"
-              >
-                <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col items-center h-screen w-full">
+                
+                <div className="h-full flex flex-col justify-center">
+                  <div className="flex items-center mb-6">
                   <div className="flex items-center gap-4">
                     <button
                       onClick={handleBackToTemplates}
                       className="text-sm text-gray-600 hover:text-rose-600"
-                      aria-label="Back to templates"
                     >
                       ← Back to Templates
                     </button>
@@ -264,8 +221,6 @@ export function CheckoutStepper({
                   </div>
                   <div className="sm:hidden text-sm text-gray-700">Step {step + 1} / 3</div>
                 </div>
-
-                <div className="h-full flex flex-col justify-center">
                   <div className="bg-white rounded-2xl shadow-md p-6">
                     {/* Step 0: Plans */}
                     {step === 0 && (
@@ -404,12 +359,7 @@ export function CheckoutStepper({
                     )}
                   </div>
                 </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+              </div>
   );
 }
 
