@@ -34,8 +34,8 @@ export default function PricingPage() {
     if (typeof window === "undefined") return;
     const previewed = localStorage.getItem("previewed_demo_template");
     if (previewed) {
-      router.replace(`/pricing?overlay=checkout2&template=${encodeURIComponent(previewed)}`);
-      localStorage.removeItem("previewed_demo_template"); // ✅ clear after use
+      router.replace("/checkout2");
+      localStorage.removeItem("previewed_demo_template"); 
     }
   }, [router]);
 

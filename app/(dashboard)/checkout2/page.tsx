@@ -13,8 +13,6 @@ import type { Plan } from "@/types/pricing";
 import { Check, ChevronLeft } from "lucide-react";
 import { defaultPlans } from "@/lib/defaultPlans";
 
-
-
 export default function PricingPage() {
   const router = useRouter();
   const { selectedId, selectedPreview, category } = useTemplateStore();
@@ -66,8 +64,7 @@ export default function PricingPage() {
     const price = interval === "quarterly" ? (plan.quarterly ?? plan.monthly) * 3 : plan.monthly;
     setChoice(selectedId, plan.id, interval);
     setTotal(price);
-
-
+    router.push("/checkout"); // Route to checkout after selection
   };
 
   const currentPrice = (plan: Plan) =>
@@ -85,81 +82,76 @@ export default function PricingPage() {
           <ChevronLeft className="w-5 h-5" />
         </a>
       </div>
+      {/* Only show pricing for selected category */}
+      <div className="w-full max-w-2xl flex flex-col gap-4 items-center mx-auto">
+        {/* Interval toggle */}
+        <div className="grid grid-cols-2 gap-2 p-1 rounded-full bg-white shadow-sm border border-[#e0d7d1]">
+          {(["quarterly", "monthly"] as const).map((val) => (
+            <button
+              key={val}
+              onClick={() => setInterval(val)}
+              className={`px-3 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+                interval === val
+                  ? "bg-[#b23b44] text-white shadow-md"
+                  : "text-[#6e5659] hover:bg-[#f0dcdc]"
+              }`}
+            >
+              {val === "quarterly" ? "Quarterly" : "Monthly"}
+            </button>
+          ))}
+        </div>
+        {/* Pricing cards for selected category */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4 items-center justify-center">
+          {filteredPlans.map((plan) => {
+            const price = Math.round(currentPrice(plan));
+            const isQuarterly = interval === "quarterly";
+            const planPrice =
+              interval === "quarterly" ? plan.quarterly ?? plan.monthly : plan.monthly;
+            const isBestValue = planPrice === maxPrice;
 
-    
-
-        {/* Right: Pricing */}
-        <div className="w-full md:w-2/5 flex flex-col gap-4 items-center">
-          {/* Interval toggle */}
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-full bg-white shadow-sm border border-[#e0d7d1]">
-            {(["quarterly", "monthly"] as const).map((val) => (
-              <button
-                key={val}
-                onClick={() => setInterval(val)}
-                className={`px-3 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
-                  interval === val
-                    ? "bg-[#b23b44] text-white shadow-md"
-                    : "text-[#6e5659] hover:bg-[#f0dcdc]"
+            return (
+              <Card
+                key={plan.id}
+                className={`relative p-6 rounded-2xl border border-transparent shadow-md hover:shadow-lg transition-transform duration-200 transform hover:-translate-y-1 flex flex-col ${
+                  isBestValue ? "ring-2 ring-[#b23b44]/20" : ""
                 }`}
               >
-                {val === "quarterly" ? "Quarterly" : "Monthly"}
-              </button>
-            ))}
-          </div>
+                <h3 className="text-xl font-bold text-[#2c1013] mb-3 text-center">{plan.name}</h3>
 
-          {/* Pricing cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4 items-center justify-center">
-            {filteredPlans.map((plan) => {
-              const price = Math.round(currentPrice(plan));
-              const isQuarterly = interval === "quarterly";
-              const planPrice =
-                interval === "quarterly" ? plan.quarterly ?? plan.monthly : plan.monthly;
-              const isBestValue = planPrice === maxPrice;
-
-              return (
-                <Card
-                  key={plan.id}
-                  className={`relative p-6 rounded-2xl border border-transparent shadow-md hover:shadow-lg transition-transform duration-200 transform hover:-translate-y-1 flex flex-col ${
-                    isBestValue ? "ring-2 ring-[#b23b44]/20" : ""
-                  }`}
-                >
-                  <h3 className="text-xl font-bold text-[#2c1013] mb-3 text-center">{plan.name}</h3>
-
-                  <div className="mb-4 flex flex-col items-center">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-extrabold text-[#b23b44]">
-                        ₦{price.toLocaleString()}
-                      </span>
-                      <span className="text-sm text-[#6e5659]">/month</span>
-                    </div>
-                    {isQuarterly && (
-                      <span className="text-xl text-slate-900 line-through mt-1">
-                        ₦{Math.round(plan.monthly).toLocaleString()}
-                      </span>
-                    )}
+                <div className="mb-4 flex flex-col items-center">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-extrabold text-[#b23b44]">
+                      ₦{price.toLocaleString()}
+                    </span>
+                    <span className="text-sm text-[#6e5659]">/month</span>
                   </div>
+                  {isQuarterly && (
+                    <span className="text-xl text-slate-900 line-through mt-1">
+                      ₦{Math.round(plan.monthly).toLocaleString()}
+                    </span>
+                  )}
+                </div>
 
-                  <ul className="flex-1 space-y-2 text-sm text-[#6e5659] mb-5">
-                    {visibleFeatures(plan).map((f) => (
-                      <li key={f} className="flex items-center gap-2">
-                        <Check className="w-5 h-5 text-[#b23b44]" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
+                <ul className="flex-1 space-y-2 text-sm text-[#6e5659] mb-5">
+                  {visibleFeatures(plan).map((f) => (
+                    <li key={f} className="flex items-center gap-2">
+                      <Check className="w-5 h-5 text-[#b23b44]" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
 
-                  <Button
-                    onClick={() => selectPlan(plan)}
-                    className="w-full py-3 rounded-full bg-[#b23b44] text-white font-bold shadow-sm hover:shadow-md transform hover:scale-105 transition-all duration-200"
-                  >
+                <Button
+                  onClick={() => selectPlan(plan)}
+                  className="w-full py-3 rounded-full bg-[#b23b44] text-white font-bold shadow-sm hover:shadow-md transform hover:scale-105 transition-all duration-200"
+                >
                   Select plan
-                  </Button>
-                </Card>
-              );
-            })}
-          </div>
+                </Button>
+              </Card>
+            );
+          })}
         </div>
-      
+      </div>
     </section>
   );
 }
