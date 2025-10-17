@@ -13,10 +13,10 @@ import type { Plan } from "@/types/pricing";
 import { Check, ChevronLeft } from "lucide-react";
 import { defaultPlans } from "@/lib/defaultPlans";
 
-const PricingOverlayLauncher = dynamic(
+{/*const PricingOverlayLauncher = dynamic(
   () => import("@/components/checkout/PricingOverlayLauncher").then((m) => m.default),
   { ssr: false }
-);
+);*/}
 
 export default function PricingPage() {
   const router = useRouter();
@@ -30,14 +30,14 @@ export default function PricingPage() {
   }, [storedPlans.length, setPlans]);
 
   // 🧠 Detect return from Live Demo
-  useEffect(() => {
+ {/*useEffect(() => {
     if (typeof window === "undefined") return;
     const previewed = localStorage.getItem("previewed_demo_template");
     if (previewed) {
       router.replace("/checkout2");
       localStorage.removeItem("previewed_demo_template"); 
     }
-  }, [router]);
+  }, [router]);*/}
 
   const filteredPlans = useMemo(() => {
     if (!storedPlans.length) return [];

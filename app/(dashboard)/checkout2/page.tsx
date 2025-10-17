@@ -1,11 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import React, { Suspense, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useTemplateStore } from "@/stores/templateStore";
 import { useCheckoutStore } from "@/stores/checkoutStore";
 import { usePricingStore } from "@/stores/pricingStore";
@@ -25,14 +23,14 @@ export default function PricingPage() {
   }, [storedPlans.length, setPlans]);
 
   // 🧠 Detect return from Live Demo
-  useEffect(() => {
+ {/* useEffect(() => {
     if (typeof window === "undefined") return;
     const previewed = localStorage.getItem("previewed_demo_template");
     if (previewed) {
       router.replace(`/pricing?overlay=checkout2&template=${encodeURIComponent(previewed)}`);
-      localStorage.removeItem("previewed_demo_template"); // ✅ clear after use
+      localStorage.removeItem("previewed_demo_template"); 
     }
-  }, [router]);
+  }, [router]);*/}
 
   const filteredPlans = useMemo(() => {
     if (!storedPlans.length) return [];
@@ -64,7 +62,7 @@ export default function PricingPage() {
     const price = interval === "quarterly" ? (plan.quarterly ?? plan.monthly) * 3 : plan.monthly;
     setChoice(selectedId, plan.id, interval);
     setTotal(price);
-    router.push("/checkout"); // Route to checkout after selection
+    router.push("/checkout");
   };
 
   const currentPrice = (plan: Plan) =>
