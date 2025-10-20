@@ -77,7 +77,6 @@ export default function PricingPage() {
       <div className="absolute top-4 left-4 w-9 h-9 rounded-full bg-[#7D141D] text-white place-content-center justify-center hover:opacity-100 transition">
         <a href="/templates" aria-label="Back to templates" title="Back to templates">
           <ChevronLeft className="w-5 h-5" />
-          <span>Back to templates</span>
         </a>
       </div>
       {/* Only show pricing for selected category */}
