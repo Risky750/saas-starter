@@ -72,6 +72,7 @@ export default function PricingPage() {
     interval === "monthly"
       ? plan.features.filter((f) => f.toLowerCase() !== "free domain")
       : plan.features;
+      
   return (
     <section className="bg-[#f5f2f0] w-full flex justify-center items-start px-4 py-8 h-screen">
       <div className="absolute top-4 left-4 w-9 h-9 rounded-full bg-[#7D141D] text-white place-content-center justify-center hover:opacity-100 transition">
