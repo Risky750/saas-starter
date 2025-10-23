@@ -10,8 +10,10 @@ import Image from "next/image";
 
 export default function TemplatesClient({
   templatesByCategory,
+  showCustomDesign = true,
 }: {
   templatesByCategory: Record<string, Template[]>;
+  showCustomDesign?: boolean;
 }) {
   const router = useRouter();
   const { selectedId, setSelectedId, selectedPreview, setSelectedPreview, category, setCategory } =
@@ -77,13 +79,15 @@ export default function TemplatesClient({
               </button>
             </div>
 
-            {/* Custom design button */}
-            <Button
-              onClick={() => router.push("/custom")}
-              className="px-4 py-2 rounded-full bg-[#7D141D] shadow hover:shadow-md text-sm text-white transition"
-            >
-              Your own custom design
-            </Button>
+            {/* Custom design button (optional) */}
+            {showCustomDesign && (
+              <Button
+                onClick={() => router.push("/custom")}
+                className="px-4 py-2 rounded-full bg-[#7D141D] shadow hover:shadow-md text-sm text-white transition"
+              >
+                Your own custom design
+              </Button>
+            )}
           </div>
         </div>
 

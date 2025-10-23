@@ -225,16 +225,26 @@ export default function CheckoutClient() {
           {/* Order summary */}
           <aside className="bg-white rounded-2xl shadow-md p-6 sm:p-8 flex flex-col h-full lg:sticky lg:top-6">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Order summary</h3>
-
             {/* Plan */}
-            <div className="mb-4">
-              <p className="text-sm text-gray-500 mb-2">Plan</p>
-              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+            <div className="mb-4 ">
+              <p className="text-md text-gray-500 mb-2">Plan</p>
+              <div>
+              <div className=" ">
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1">
                 <p className="text-sm text-gray-500">Billed {isQuarterly ? "quarterly" : interval}</p>
                 <div className="text-right">
                   <p className="text-lg font-semibold text-gray-900">{formatNaira(planPrice)}</p>
                   {isQuarterly && <p className="text-sm text-gray-400 ">* 3</p>}
                 </div>
+                </div>
+               
+                 <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1">
+                <p className="text-sm text-gray-500">Domain {isQuarterly ? "" : interval}</p>
+                <div className="text-right">
+                  {isQuarterly && <p className="text-sm text-gray-400 ">+ 7500</p>}
+                </div>
+                </div>
+              </div>
               </div>
             </div>
 
@@ -270,8 +280,8 @@ export default function CheckoutClient() {
             {isQuarterly && (
               <div className="flex flex-col gap-1 mb-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Subtotal (plan * 3)</span>
-                  <span className="text-gray-900">{formatNaira(planPrice * 3)}</span>
+                  <span className="text-gray-500">Subtotal </span>
+                  <span className="text-lg text-gray-900">{formatNaira(planPrice * 3 + (DOMAIN_COST))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500 ">Domain</span>
