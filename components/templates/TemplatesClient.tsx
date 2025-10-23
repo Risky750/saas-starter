@@ -11,9 +11,11 @@ import Image from "next/image";
 export default function TemplatesClient({
   templatesByCategory,
   showCustomDesign = true,
+  showCategoryToggle = true,
 }: {
   templatesByCategory: Record<string, Template[]>;
   showCustomDesign?: boolean;
+  showCategoryToggle?: boolean;
 }) {
   const router = useRouter();
   const { selectedId, setSelectedId, selectedPreview, setSelectedPreview, category, setCategory } =
@@ -54,30 +56,32 @@ export default function TemplatesClient({
           <h1 className="text-3xl font-bold">Choose your template</h1>
 
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            {/* Category Toggle */}
-            <div className="relative flex items-center bg-white shadow-md rounded-full px-1 py-1 w-56 h-10 border border-[#e6d9d3] overflow-hidden">
-              <div
-                className={`absolute top-1 bottom-1 w-[48%] rounded-full bg-[#7D141D] transition-all duration-300 ease-in-out shadow-md ${
-                  localCategory === "website" ? "left-1" : "left-[50%]"
-                }`}
-              />
-              <button
-                onClick={() => setLocalCategory("website")}
-                className={`relative z-10 w-1/2 text-sm font-semibold transition-colors ${
-                  localCategory === "website" ? "text-white" : "text-[#7D141D]"
-                }`}
-              >
-                Website
-              </button>
-              <button
-                onClick={() => setLocalCategory("portfolio")}
-                className={`relative z-10 w-1/2 text-sm font-semibold transition-colors ${
-                  localCategory === "portfolio" ? "text-white" : "text-[#7D141D]"
-                }`}
-              >
-                Portfolio
-              </button>
-            </div>
+            {/* Category Toggle (optional) */}
+            {showCategoryToggle && (
+              <div className="relative flex items-center bg-white shadow-md rounded-full px-1 py-1 w-56 h-10 border border-[#e6d9d3] overflow-hidden">
+                <div
+                  className={`absolute top-1 bottom-1 w-[48%] rounded-full bg-[#7D141D] transition-all duration-300 ease-in-out shadow-md ${
+                    localCategory === "website" ? "left-1" : "left-[50%]"
+                  }`}
+                />
+                <button
+                  onClick={() => setLocalCategory("website")}
+                  className={`relative z-10 w-1/2 text-sm font-semibold transition-colors ${
+                    localCategory === "website" ? "text-white" : "text-[#7D141D]"
+                  }`}
+                >
+                  Website
+                </button>
+                <button
+                  onClick={() => setLocalCategory("portfolio")}
+                  className={`relative z-10 w-1/2 text-sm font-semibold transition-colors ${
+                    localCategory === "portfolio" ? "text-white" : "text-[#7D141D]"
+                  }`}
+                >
+                  Portfolio
+                </button>
+              </div>
+            )}
 
             {/* Custom design button (optional) */}
             {showCustomDesign && (

@@ -45,13 +45,14 @@ export default function FashionTemplatesPage() {
             <p className="text-sm text-[#6e5659] mt-1">Showcase collections and lookbooks with these templates.</p>
           </div>
 
-          <Link href="/templates" className="text-sm text-[#7D141D] font-semibold hover:underline">
-            Browse other templates
-          </Link>
+        
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#e0d7d1] p-6 shadow-sm">
-          <TemplatesClient templatesByCategory={{ portfolio: templates }} showCustomDesign={false} />
+        <div>
+          <TemplatesClient templatesByCategory={{ portfolio: templates }} showCustomDesign={false} showCategoryToggle={false} />
+            <Link href="/templates" className="text-sm text-[#7D141D] font-semibold hover:underline">
+            Browse other templates
+          </Link>
         </div>
       </div>
     </div>
