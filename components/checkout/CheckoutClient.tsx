@@ -192,7 +192,7 @@ export default function CheckoutClient() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 flex flex-col">
+    <div className="h-screen bg-gray-50 pb-24 flex flex-col">
       <div className="flex-1 max-w-6xl mx-auto px-4 py-8 lg:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 h-full">
           {/* Template + Register */}
