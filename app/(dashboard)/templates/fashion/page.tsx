@@ -24,15 +24,15 @@ export default function FashionTemplatesPage() {
       .filter((d) => d.isDirectory())
       .forEach((d) => {
         const folder = path.join(base, d.name);
-        const shots = fs.readdirSync(folder).filter((f) => IMAGE_EXT.test(f)).map((f) => `/templates/portfolio/${d.name}/${f}`);
+        const shots = fs.readdirSync(folder).filter((f) => IMAGE_EXT.test(f)).map((f) => `/templates/fashion/${d.name}/${f}`);
         if (shots.length) {
-          templates.push({ id: `portfolio/${d.name}`, title: humanize(d.name), category: "portfolio", images: shots });
+          templates.push({ id: `fashion/${d.name}`, title: humanize(d.name), category: "portfolio", images: shots });
         }
       });
 
     fs.readdirSync(base).filter((f) => IMAGE_EXT.test(f)).forEach((file) => {
       const name = path.parse(file).name;
-      templates.push({ id: `portfolio/${name}`, title: humanize(name), category: "portfolio", images: [`/templates/portfolio/${file}`] });
+      templates.push({ id: `fashion/${name}`, title: humanize(name), category: "portfolio", images: [`/templates/fashion/${file}`] });
     });
   }
 
@@ -49,8 +49,12 @@ export default function FashionTemplatesPage() {
         </div>
 
         <div>
-          <TemplatesClient templatesByCategory={{ portfolio: templates }} showCustomDesign={false} showCategoryToggle={false} />
-            <Link href="/templates" className="text-sm text-[#7D141D] font-semibold hover:underline">
+          <TemplatesClient
+            templatesByCategory={{ portfolio: templates, website: templates }}
+            showCustomDesign={false}
+            showCategoryToggle={false}
+          />
+            <Link href="/templates" className="text-md text-[#7D141D] font-semibold hover:underline">
             Browse other templates
           </Link>
         </div>

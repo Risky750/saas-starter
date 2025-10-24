@@ -46,22 +46,13 @@ export default function Register() {
           />
 
           <Input
-            placeholder="Phone Number"
+            placeholder="Phone Number / Email "
             value={phone}
             onChange={(e) => setField("phone", e.target.value)}
-            type="tel"
+            type="string"
             required
             className="border-[#7D141D]/30 focus:ring-[#FF1E27]"
           />
-             <Input
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setField("email", e.target.value)}
-            type="email"
-            required
-            className="border-[#7D141D]/30 focus:ring-[#FF1E27]"
-          />
-
           <div className="flex flex-col gap-3">
             <Button
               type="submit"

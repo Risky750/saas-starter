@@ -131,7 +131,7 @@ export default function CheckoutClient() {
     if (!apiKey || !contractCode) {
       setLoading(false);
       alert(
-        "Payment configuration missing. Please contact support (MONNIFY API key or contract code not set)."
+      "service unavailable"
       );
       return;
     }
@@ -198,26 +198,10 @@ export default function CheckoutClient() {
           {/* Template + Register */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
-              <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8">
-                <div className="mb-6 lg:mb-0 flex justify-center items-center">
-               <div className="relative w-full max-w-[500px] aspect-[16/10] rounded-xl overflow-hidden border border-gray-200">
-  {activeTemplate ? (
-    <Image
-      src={activeTemplate.startsWith("/") ? activeTemplate : `/${activeTemplate}`}
-      alt="template preview"
-      fill
-      className="object-cover"
-      sizes="(max-width: 768px) 100vw, 500px"
-      priority
-    />
-  ) : (
-    <div className="w-full h-full bg-gray-100 grid place-items-center text-xs text-gray-400">
-      No preview available
-    </div>
-  )}
-</div>
+              <div className="flex flex-col">
+                <div className="mb-6  flex justify-center items-center">
+                 <Register />
                 </div>
-                <Register />
               </div>
             </div>
           </div>

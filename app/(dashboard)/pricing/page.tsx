@@ -101,46 +101,9 @@ export default function PricingPage() {
       </div>
 
       <div className="w-full max-w-7xl flex flex-col md:flex-row gap-6 items-center md:items-start">
-        {/* Left: Template Preview */}
-        {selectedPreview && (
-          <div className="w-full md:w-3/5 flex flex-col gap-4 items-center mt-10">
-            <div className="relative w-full max-w-[650px] aspect-[16/10] rounded-xl border border-[#e0d7d1] bg-white shadow-md overflow-visible hover:shadow-lg transition-shadow">
-              <Image
-                src={selectedPreview}
-                alt="Selected template preview"
-                width={650}
-                height={400}
-                className="h-full w-full object-cover"
-              />
-            </div>
-
-            <Button
-              onClick={() => {
-                if (!selectedId) {
-                  alert("Select a template first to preview it.");
-                  return;
-                }
-                const rawParts = selectedId.split("/").filter(Boolean);
-                const namePart = rawParts[rawParts.length - 1] || selectedId;
-                const parts = encodeURIComponent(namePart);
-                const baseRaw = (process.env.NEXT_PUBLIC_TEMPLATES_BASE_URL || "").replace(/\/$/, "");
-                const url = baseRaw ? `${baseRaw}/${parts}` : `https://tinyurl.com/${parts}`;
-                try {
-                  localStorage.setItem("previewed_demo_template", namePart);
-                } catch (e) {}
-                window.open(url);
-              }}
-              className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"
-            >
-              Live Demo
-            </Button>
-          </div>
-        )}
-
-        {/* Right: Pricing */}
-        <div className="w-full md:w-2/5 flex flex-col gap-4 items-center">
-          {/* Interval toggle */}
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-full bg-white shadow-sm border border-[#e0d7d1]">
+        {/* Left: Pricing */}
+        <div className="w-full md:w-3/5 flex flex-col gap-4 items-center md:order-1">
+         <div className="grid grid-cols-2 gap-2 p-1 rounded-full bg-white shadow-sm border border-[#e0d7d1]">
             {(["quarterly", "monthly"] as const).map((val) => (
               <button
                 key={val}
@@ -207,6 +170,45 @@ export default function PricingPage() {
               );
             })}
           </div>
+          </div>
+          <div className="w-full md:w-2/5 flex flex-col gap-4 items-center md:order-2">
+        {/* Right: Templates preview */}
+          {selectedPreview && (
+          <div className="flex flex-col gap-4 items-center mt-10 w-full">
+            <div className="relative w-full max-w-[650px] aspect-[16/10] rounded-xl border border-[#e0d7d1] bg-white shadow-md overflow-visible hover:shadow-lg transition-shadow">
+              <Image
+                src={selectedPreview}
+                alt="Selected template preview"
+                width={650}
+                height={400}
+                className="h-full w-full object-cover"
+              />
+            </div>
+
+            <Button
+              onClick={() => {
+                if (!selectedId) {
+                  alert("Select a template first to preview it.");
+                  return;
+                }
+                const rawParts = selectedId.split("/").filter(Boolean);
+                const namePart = rawParts[rawParts.length - 1] || selectedId;
+                const parts = encodeURIComponent(namePart);
+                const baseRaw = (process.env.NEXT_PUBLIC_TEMPLATES_BASE_URL || "").replace(/\/$/, "");
+                const url = baseRaw ? `${baseRaw}/${parts}` : `https://tinyurl.com/${parts}`;
+                try {
+                  localStorage.setItem("previewed_demo_template", namePart);
+                } catch (e) {}
+                window.open(url);
+              }}
+              className="px-6 py-3 mt-3 rounded-full bg-[#7d141d] text-white hover:bg-[#a01c24] transition font-semibold shadow-sm"
+            >
+              Live Demo
+            </Button>
+          </div>
+        )}
+
+          {/* Interval toggle */}
         </div>
       </div>
 

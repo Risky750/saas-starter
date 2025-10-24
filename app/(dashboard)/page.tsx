@@ -33,7 +33,7 @@ export default function HomePage() {
               className="mt-8 rounded-full bg-[#7D141D] text-white hover:bg-[#FF1E27]"
               onClick={() => push("/work")}
             >
-             <p className="text-lg"> Get your website now</p><ArrowRight className="ml-2 h-5 w-5" />
+             <p className="text-xl"> Get your website now</p><ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
 

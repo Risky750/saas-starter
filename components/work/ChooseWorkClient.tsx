@@ -27,7 +27,7 @@ export default function ChooseWorkClient() {
 
   const skip = () => {
     setSelectedId(null);
-    router.push("/pricing");
+    router.push("/templates");
   };
 
   return (
