@@ -20,7 +20,7 @@ export default function Register() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email,phone }), // phoneNumber removed
+      body: JSON.stringify({ name, email }), // phoneNumber removed
     });
 
     const json = await res.json();
