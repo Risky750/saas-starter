@@ -41,7 +41,7 @@ export default function FashionTemplatesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-[#2c1013]">Fashion Designer Templates</h1>
+            <h1 className="text-3xl font-extraboldtext-[#7D141D]">Fashion Designer Templates</h1>
             <p className="text-sm text-[#6e5659] mt-1">Showcase collections and lookbooks with these templates.</p>
           </div>
 
@@ -52,7 +52,7 @@ export default function FashionTemplatesPage() {
           <TemplatesClient
             templatesByCategory={{ portfolio: templates, website: templates }}
             showCustomDesign={false}
-            showCategoryToggle={false}
+            showCategoryToggle={true}
           />
             <Link href="/templates" className="text-md text-[#7D141D] font-semibold hover:underline">
             Browse other templates

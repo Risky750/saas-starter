@@ -76,10 +76,10 @@ export default function PricingPage() {
     const previewFlag =
       typeof window !== "undefined" ? localStorage.getItem("previewed_demo_template") : null;
 
-    if (previewFlag && previewFlag === namePart) {
+   {/*if (previewFlag && previewFlag === namePart) {
       router.push(`/checkout2`);
       return;
-    }
+   }*/}
 
     router.push("/checkout");
   };
@@ -95,9 +95,21 @@ export default function PricingPage() {
   return (
     <section className="bg-[#f5f2f0] w-full flex justify-center items-start px-4 py-8 h-screen">
       <div className="absolute top-4 left-4 w-9 h-9 rounded-full bg-[#7D141D] text-white place-content-center justify-center hover:opacity-100 transition">
-        <a href="/templates" aria-label="Back to templates" title="Back to templates">
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/templates");
+            }
+          }}
+          aria-label="Go back"
+          title="Go back"
+          className="w-full h-full flex items-center justify-center"
+        >
           <ChevronLeft className="w-5 h-5" />
-        </a>
+        </button>
       </div>
 
       <div className="w-full max-w-7xl flex flex-col md:flex-row gap-6 items-center md:items-start">

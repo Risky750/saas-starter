@@ -62,7 +62,7 @@ export default function CheckoutClient() {
         setScriptError(false);
       };
       script.onerror = (e) => {
-        console.error("❌ Failed to load Monnify SDK", e);
+        console.error("service not found", e);
         setScriptError(true);
         setSdkReady(false);
       };
@@ -112,8 +112,8 @@ export default function CheckoutClient() {
 
     if (!sdkReady || !window.MonnifySDK) {
       const msg = scriptError
-        ? "Payment SDK failed to load. Check your network or browser console for errors."
-        : "Payment system not ready yet. Try again in a moment.";
+        ? "Check your network or browser for errors."
+        : "Try again in a moment.";
       alert(msg);
       return;
     }
