@@ -221,13 +221,14 @@ export default function CheckoutClient() {
                   {isQuarterly && <p className="text-sm text-gray-400 ">* 3</p>}
                 </div>
                 </div>
-               
-                 <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1">
-                <p className="text-sm text-gray-500">Domain {isQuarterly ? "" : interval}</p>
-                <div className="text-right">
-                  {isQuarterly && <p className="text-sm text-gray-400 ">+ 7500</p>}
+               {isQuarterly && (
+                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1">
+                  <p className="text-sm text-gray-500">Domain</p>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-400 ">+ 7500</p>
+                  </div>
                 </div>
-                </div>
+               )}
               </div>
               </div>
             </div>
