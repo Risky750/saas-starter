@@ -5,10 +5,10 @@ import postgres from "postgres";
 export async function POST(req: Request) {
 	try {
 		const body: ContactBody = await req.json();
-		const { email, name } = body;
+		const {phone, name } = body;
 
-		if (!email) {
-			return NextResponse.json({ error: "Missing email" }, { status: 400 });
+		if (!phone) {
+			return NextResponse.json({ error: "Missing phone" }, { status: 400 });
 		}
 
 		const POSTGRES_URL = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 		const client = postgres(POSTGRES_URL, { ssl: "require" });
 
 		// Check if already exists
-		const check = await client`SELECT id FROM contacts WHERE email = ${email}`;
+		const check = await client`SELECT id FROM contacts WHERE email = ${phone}`;
 		let contactId: number;
 
 		if (check && check.length > 0) {
@@ -35,12 +35,12 @@ export async function POST(req: Request) {
 		} else {
 			const insert = await client`
         INSERT INTO contacts (name, email)
-        VALUES (${name ?? null}, ${email})
+        VALUES (${name ?? null}, ${phone})
         RETURNING id`;
 			contactId = insert[0].id;
 		}
 
-		console.info("Contact saved", { contactId, email });
+		console.info("Contact saved", { contactId, phone });
 		return NextResponse.json({ ok: true, contactId }, { status: 200 });
 	} catch (err: any) {
 		console.error("Contact API error", err);
