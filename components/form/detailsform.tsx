@@ -1,5 +1,5 @@
 "use client";
-import React, { FormEvent, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,39 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Local value mirrors either email or phone and helps detection
+  const [inputValue, setInputValue] = useState<string>(email || phone || "");
+  const [detected, setDetected] = useState<"email" | "phone" | null>(
+    email ? "email" : phone ? "phone" : null
+  );
+
+  useEffect(() => {
+    setInputValue(email || phone || "");
+    setDetected(email ? "email" : phone ? "phone" : null);
+  }, [email, phone]);
+
+  const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const isPhone = (v: string) => v.replace(/[^0-9]/g, "").length >= 7;
+
   const handleSave = async (e?: FormEvent) => {
     e?.preventDefault?.();
     setLoading(true);
     setError(null);
 
+    // Prepare payload using detected type
+    const payload: Record<string, string | undefined> = { name };
+    if (detected === "email") payload.email = inputValue;
+    else if (detected === "phone") payload.phone = inputValue;
+    else {
+      // Fallback: prefer email if input looks like email, otherwise phone
+      if (isEmail(inputValue)) payload.email = inputValue;
+      else if (isPhone(inputValue)) payload.phone = inputValue;
+    }
+
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone }),
+      body: JSON.stringify(payload),
     });
 
     const json = await res.json();
@@ -46,13 +70,33 @@ export default function Register() {
           />
 
           <Input
-            placeholder="Phone Number / Email "
-            value={phone}
-            onChange={(e) => setField("phone", e.target.value)}
-            type="string"
+            placeholder="Phone Number / Email"
+            value={inputValue}
+            onChange={(e) => {
+              const v = e.target.value;
+              setInputValue(v);
+              if (isEmail(v)) {
+                setDetected("email");
+                setField("email", v);
+                setField("phone", "");
+              } else if (isPhone(v) && !v.includes("@")) {
+                setDetected("phone");
+                setField("phone", v);
+                setField("email", "");
+              } else {
+                setDetected(null);
+                setField("phone", "");
+                setField("email", "");
+              }
+            }}
+            type={detected === "email" ? "email" : "tel"}
             required
             className="border-[#7D141D]/30 focus:ring-[#FF1E27]"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            {detected === "email" && "Detected: email address"}
+            {detected === "phone" && "Detected: phone number"}
+          </p>
           <div className="flex flex-col gap-3">
             <Button
               type="submit"
