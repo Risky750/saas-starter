@@ -16,23 +16,53 @@ function humanize(str: string) {
 
 export default function MediaTemplatesPage() {
   const base = path.join(process.cwd(), "public", "templates", "media");
-  const templates: Template[] = [];
+
+  const categories = ["portfolio", "website"] as const;
+  const templatesByCategory: Record<string, Template[]> = {
+    portfolio: [],
+    website: [],
+  };
 
   if (fs.existsSync(base)) {
-    fs.readdirSync(base, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
-      .forEach((d) => {
-        const folder = path.join(base, d.name);
-        const shots = fs.readdirSync(folder).filter((f) => IMAGE_EXT.test(f)).map((f) => `/templates/media/${d.name}/${f}`);
-        if (shots.length) {
-          templates.push({ id: `media/${d.name}`, title: humanize(d.name), category: "portfolio", images: shots });
-        }
-      });
+    // Populate per-category lists from subfolders (media/portfolio, media/website)
+    categories.forEach((cat) => {
+      const catBase = path.join(base, cat);
+      if (fs.existsSync(catBase)) {
+        fs.readdirSync(catBase, { withFileTypes: true })
+          .filter((d) => d.isDirectory())
+          .forEach((d) => {
+            const folder = path.join(catBase, d.name);
+            const shots = fs.readdirSync(folder).filter((f) => IMAGE_EXT.test(f)).map((f) => `/templates/media/${cat}/${d.name}/${f}`);
+            if (shots.length) {
+              templatesByCategory[cat].push({ id: `${cat}/${d.name}`, title: humanize(d.name), category: cat, images: shots });
+            }
+          });
 
-    fs.readdirSync(base).filter((f) => IMAGE_EXT.test(f)).forEach((file) => {
-      const name = path.parse(file).name;
-      templates.push({ id: `media/${name}`, title: humanize(name), category: "portfolio", images: [`/templates/media/${file}`] });
+        fs.readdirSync(catBase).filter((f) => IMAGE_EXT.test(f)).forEach((file) => {
+          const name = path.parse(file).name;
+          templatesByCategory[cat].push({ id: `${cat}/${name}`, title: humanize(name), category: cat, images: [`/templates/media/${cat}/${file}`] });
+        });
+      }
     });
+
+    // If there are no explicit subfolders, fallback to the legacy structure: treat files/folders under base as portfolio
+    const hasAny = categories.some((c) => fs.existsSync(path.join(base, c)));
+    if (!hasAny) {
+      fs.readdirSync(base, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .forEach((d) => {
+          const folder = path.join(base, d.name);
+          const shots = fs.readdirSync(folder).filter((f) => IMAGE_EXT.test(f)).map((f) => `/templates/media/${d.name}/${f}`);
+          if (shots.length) {
+            templatesByCategory.portfolio.push({ id: `portfolio/${d.name}`, title: humanize(d.name), category: "portfolio", images: shots });
+          }
+        });
+
+      fs.readdirSync(base).filter((f) => IMAGE_EXT.test(f)).forEach((file) => {
+        const name = path.parse(file).name;
+        templatesByCategory.portfolio.push({ id: `portfolio/${name}`, title: humanize(name), category: "portfolio", images: [`/templates/media/${file}`] });
+      });
+    }
   }
 
   return (
@@ -48,16 +78,16 @@ export default function MediaTemplatesPage() {
         </div>
 
         <div>
-            <TemplatesClient
-              templatesByCategory={{ portfolio: templates, website: templates }}
-              showCustomDesign={false}
-              showCategoryToggle={true}
-            />
-              
-               <Link href="/templates" className="text-md text-[#7D141D] font-semibold hover:underline">
+          <TemplatesClient
+            templatesByCategory={templatesByCategory}
+            showCustomDesign={false}
+            showCategoryToggle={true}
+          />
+
+          <Link href="/templates" className="text-md text-[#7D141D] font-semibold hover:underline">
             Browse other templates
           </Link>
-          </div>
+        </div>
       </div>
     </div>
   );
