@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Register from "@/components/form/detailsform";
@@ -23,7 +22,7 @@ const formatNaira = (amount: number) =>
 
 export default function CheckoutClient() {
   const params = useSearchParams();
-  const { name, email } = useRegisterStore();
+  const { name, email, phone } = useRegisterStore();
   const { selectedPreview } = useTemplateStore();
   const { setChoice, setTotal, setDomainAdded, domainAdded } = useCheckoutStore();
   const { plans, interval } = usePricingStore();
@@ -105,8 +104,8 @@ export default function CheckoutClient() {
   };
 
   const handlePay = () => {
-    if (!name || !email) {
-      alert("Please fill in your name and email first!");
+    if (!name || (!email && !phone)) {
+      alert("Please fill in your name and either an email or phone number first!");
       return;
     }
 
@@ -140,9 +139,10 @@ export default function CheckoutClient() {
     window.MonnifySDK.initialize({
       amount: displayTotal,
         currency: "NGN",
-          customerName: name,
-          customerFullName: name,
-        customerEmail: email,
+    customerName: name,
+    customerFullName: name,
+    // Monnify prefers an email; pass email when available. If only phone is provided, leave undefined and include phone in metadata.
+    customerEmail: email || undefined,
         apiKey,
         contractCode,
         baseUrl: baseUrl || undefined,
@@ -151,6 +151,7 @@ export default function CheckoutClient() {
           planId: selectedPlan?.id,
           interval,
           domainAdded,
+          contact: email || phone || undefined,
         },
         onLoadStart: () => {
           setLoading(true);
