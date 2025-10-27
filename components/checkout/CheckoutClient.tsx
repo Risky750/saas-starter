@@ -129,7 +129,7 @@ export default function CheckoutClient() {
     return v.replace(/^\s*"(.*)"\s*$/, "$1");
   };
 
-  // ✅ Fixed handlePay
+  // ✅ Handle payment
   const handlePay = () => {
     console.log("💳 Payment attempt started...");
     console.log("User Info:", { name, email, phone });
@@ -249,13 +249,99 @@ export default function CheckoutClient() {
 
   return (
     <div className="h-screen bg-gray-50 pb-24 flex flex-col">
-      {/* UI stays exactly the same */}
-      {/* ... */}
-      <aside>
-        <Button onClick={handlePay} disabled={loading || !sdkReady}>
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `Pay ${formatNaira(totalAmount)}`}
-        </Button>
-      </aside>
+      <div className="flex-1 max-w-6xl mx-auto px-4 py-8 lg:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 h-full">
+          {/* Template + Register */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
+              <div className="flex flex-col">
+                <div className="mb-6 flex justify-center items-center">
+                  <Register />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Order summary */}
+          <aside className="bg-white rounded-2xl shadow-md p-6 sm:p-8 flex flex-col h-full lg:sticky lg:top-6">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Order summary</h3>
+
+            {/* Plan */}
+            <div className="mb-4">
+              <p className="text-md text-gray-500 mb-2">Plan</p>
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1">
+                <p className="text-sm text-gray-500">Billed {isQuarterly ? "quarterly" : interval}</p>
+                <div className="text-right">
+                  <p className="text-lg font-semibold text-gray-900">{formatNaira(planPrice)}</p>
+                  {isQuarterly && <p className="text-sm text-gray-400 ">* 3</p>}
+                </div>
+              </div>
+
+              {isQuarterly && (
+                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1 mt-1">
+                  <p className="text-sm text-gray-500">Domain</p>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-400 ">+ 7500</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Domain */}
+            <div className="mb-4">
+              <p className="text-sm text-gray-500 mb-2">Custom domain</p>
+              {isMonthly ? (
+                <label
+                  className={`w-full flex items-center justify-between rounded-lg border p-4 cursor-pointer transition ${
+                    domainAdded ? "border-rose-500 bg-rose-50" : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <span className="font-medium text-gray-800">Add domain (one-off)</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-600">{formatNaira(DOMAIN_COST)}</span>
+                    <input
+                      type="checkbox"
+                      checked={domainAdded}
+                      onChange={(e) => setDomainAdded(e.target.checked)}
+                      className="w-5 h-5 accent-rose-500 border-gray-300 rounded focus:ring-rose-500"
+                    />
+                  </div>
+                </label>
+              ) : (
+                <div className="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-3">
+                  <Check className="w-5 h-5" />
+                  <span className="text-sm">Free domain worth {formatNaira(DOMAIN_COST)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Total */}
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-gray-500 font-semibold">Total</span>
+              <span className="text-xl sm:text-2xl font-bold text-gray-900">{formatNaira(totalAmount)}</span>
+            </div>
+
+            <Button
+              onClick={handlePay}
+              disabled={loading || !sdkReady}
+              className="w-full h-12 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium transition disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `Pay ${formatNaira(totalAmount)}`}
+            </Button>
+
+            {errorMessage && (
+              <div className="mt-4 rounded-md p-3 bg-yellow-50 border border-yellow-200">
+                <p className="text-sm text-yellow-800">{errorMessage}</p>
+                <div className="mt-3 flex gap-2">
+                  <Button onClick={() => { setErrorMessage(null); handlePay(); }} className="px-3 py-1">Retry payment</Button>
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-gray-400 text-center mt-3">Secure checkout • Instant activation</p>
+          </aside>
+        </div>
+      </div>
     </div>
   );
 }
