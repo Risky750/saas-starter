@@ -22,6 +22,8 @@ const formatNaira = (amount: number) =>
 
 export default function CheckoutClient() {
   const params = useSearchParams();
+  const router = useRouter();
+
   const { name, email, phone } = useRegisterStore();
   const { selectedPreview } = useTemplateStore();
   const { setChoice, setTotal, setDomainAdded, domainAdded } = useCheckoutStore();
@@ -47,40 +49,45 @@ export default function CheckoutClient() {
   const [scriptError, setScriptError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const router = useRouter();
+  const paymentCompletedRef = useRef(false);
 
-  // Calculate total
+  // total calculation
   const subtotal = isQuarterly ? planPrice * 3 : planPrice;
   const totalAmount = isQuarterly ? subtotal : subtotal + (domainAdded ? DOMAIN_COST : 0);
 
-  // Load Monnify SDK manually
+  // ✅ Load Monnify SDK safely
   useEffect(() => {
-    if (!window.MonnifySDK) {
+    const existing = document.querySelector('script[src="https://sdk.monnify.com/plugin/monnify.js"]');
+    if (!existing) {
       const script = document.createElement("script");
       script.src = "https://sdk.monnify.com/plugin/monnify.js";
       script.async = true;
       script.onload = () => {
-        setSdkReady(true);
-        setScriptError(false);
+        if (window.MonnifySDK) {
+          setSdkReady(true);
+          setScriptError(false);
+        }
       };
       script.onerror = (e) => {
-        console.error("service not found", e);
+        console.error("Monnify SDK failed to load:", e);
         setScriptError(true);
         setSdkReady(false);
       };
       document.body.appendChild(script);
     } else {
-      setSdkReady(true);
+      if (window.MonnifySDK) setSdkReady(true);
     }
   }, []);
 
+  // Load default plans if none found
   useEffect(() => {
     if (!plans || (Array.isArray(plans) && plans.length === 0)) {
-      import("@/lib/defaultPlans").then((m) => {
-        const defs = m.defaultPlans as PricePlan[];
-        (usePricingStore as any).getState().setPlans(defs);
-      }).catch(() => {
-      });
+      import("@/lib/defaultPlans")
+        .then((m) => {
+          const defs = m.defaultPlans as PricePlan[];
+          (usePricingStore as any).getState().setPlans(defs);
+        })
+        .catch(() => {});
     }
   }, [plans]);
 
@@ -99,15 +106,13 @@ export default function CheckoutClient() {
     }
   }, [params, selectedPreview, activePlanId, interval, setChoice, setTotal, setDomainAdded, snap.domainAdded]);
 
-  const paymentCompletedRef = useRef(false);
-
   const clearTimer = () => {
     try {
       if (timerRef.current) {
         clearTimeout(timerRef.current as any);
         timerRef.current = null;
       }
-    } catch (e) {}
+    } catch {}
   };
 
   const sanitizeEnv = (v?: string) => {
@@ -115,109 +120,98 @@ export default function CheckoutClient() {
     return v.replace(/^\s*"(.*)"\s*$/, "$1");
   };
 
- const handlePay = () => {
-  if (!name || (!email && !phone)) {
-    alert("Please fill in your name and either an email or phone number first!");
-    return;
-  }
-
-  // make sure SDK loaded properly
-  if (!sdkReady || typeof window.MonnifySDK !== "object") {
-    const msg = scriptError
-      ? "Monnify service not available. Check your internet connection or reload."
-      : "Payment system still loading. Please wait a few seconds and try again.";
-    alert(msg);
-    return;
-  }
-
-  setErrorMessage(null);
-  setLoading(true);
-  paymentCompletedRef.current = false;
-  clearTimer();
-
-  // shorter watchdog timer (8 seconds instead of 15)
-  timerRef.current = setTimeout(() => {
-    if (!paymentCompletedRef.current) {
-      setLoading(false);
-      setErrorMessage("Payment is taking too long. Try again or use manual checkout.");
+  // ✅ Fixed handlePay
+  const handlePay = () => {
+    if (!name || (!email && !phone)) {
+      alert("Please fill in your name and either an email or phone number first!");
+      return;
     }
-  }, 8000);
 
-  // use persisted total if available
-  const storedTotal = snap.total;
-  const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
+    if (!sdkReady || typeof window.MonnifySDK !== "object") {
+      const msg = scriptError
+        ? "Monnify service not available. Check your internet connection or reload."
+        : "Payment system still loading. Please wait a few seconds and try again.";
+      alert(msg);
+      return;
+    }
 
-  // ensure environment variables are defined
-  const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
-  const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
-  const baseUrl = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_BASE_URL as any);
-
-  if (!apiKey || !contractCode) {
+    setErrorMessage(null);
+    setLoading(true);
+    paymentCompletedRef.current = false;
     clearTimer();
-    setLoading(false);
-    alert("Payment service unavailable. Missing Monnify configuration.");
-    return;
-  }
 
-  try {
-    // fallback email if only phone provided
-    const fallbackEmail = email || `${phone}@placeholder.com`;
-
-    window.MonnifySDK.initialize({
-      amount: displayTotal,
-      currency: "NGN",
-      customerName: name,
-      customerFullName: name,
-      customerEmail: fallbackEmail,
-      apiKey,
-      contractCode,
-      baseUrl: baseUrl || undefined,
-      paymentDescription: `${selectedPlan?.name ?? "Plan"} - ${isQuarterly ? "Quarterly" : "Monthly"}`,
-      metadata: {
-        planId: selectedPlan?.id,
-        interval,
-        domainAdded,
-        contact: email || phone || undefined,
-      },
-      onLoadStart: () => {
-        setLoading(true);
-      },
-      onLoadComplete: () => {
-        clearTimer();
+    // shorter watchdog timer (8s)
+    timerRef.current = setTimeout(() => {
+      if (!paymentCompletedRef.current) {
         setLoading(false);
-      },
-      onComplete: (res: any) => {
-        paymentCompletedRef.current = true;
-        try { useRegisterStore.getState().clear?.(); } catch {}
-        try { useCheckoutStore.getState().clear?.(); } catch {}
-        try { useTemplateStore.getState().clear?.(); } catch {}
-        try { (usePricingStore as any).getState().clear?.(); } catch {}
+        setErrorMessage("Payment is taking too long. Try again or pay to 9012065117 Opay.");
+      }
+    }, 8000);
 
-        clearTimer();
-        setLoading(false);
-        router.push(`/`);
-      },
-      onClose: () => {
-        if (!paymentCompletedRef.current) {
+    const storedTotal = snap.total;
+    const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
+
+    const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
+    const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
+    const baseUrl = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_BASE_URL as any);
+
+    if (!apiKey || !contractCode) {
+      clearTimer();
+      setLoading(false);
+      alert("Payment service unavailable. you can also make payment to 9012065117 Opay ");
+      return;
+    }
+
+    try {
+      window.MonnifySDK.initialize({
+        amount: displayTotal,
+        currency: "NGN",
+        customerName: name,
+        customerFullName: name,
+        ...(email ? { customerEmail: email } : {}), // ✅ only include email if present
+        apiKey,
+        contractCode,
+        baseUrl: baseUrl || undefined,
+        paymentDescription: `${selectedPlan?.name ?? "Plan"} - ${isQuarterly ? "Quarterly" : "Monthly"}`,
+        metadata: {
+          planId: selectedPlan?.id,
+          interval,
+          domainAdded,
+          contact: email || phone || undefined, // whichever exists
+        },
+        onLoadStart: () => setLoading(true),
+        onLoadComplete: () => {
           clearTimer();
           setLoading(false);
-          router.push("/checkout");
-        }
-      },
-    });
-  } catch (err: any) {
-    clearTimer();
-    setLoading(false);
-    console.error("Monnify init failed:", err);
-    alert("Payment initialization failed: " + (err?.message || String(err)));
-  }
-};
-
+        },
+        onComplete: (res: any) => {
+          paymentCompletedRef.current = true;
+          try { useRegisterStore.getState().clear?.(); } catch {}
+          try { useCheckoutStore.getState().clear?.(); } catch {}
+          try { useTemplateStore.getState().clear?.(); } catch {}
+          try { (usePricingStore as any).getState().clear?.(); } catch {}
+          clearTimer();
+          setLoading(false);
+          router.push(`/`);
+        },
+        onClose: () => {
+          if (!paymentCompletedRef.current) {
+            clearTimer();
+            setLoading(false);
+            router.push("/checkout");
+          }
+        },
+      });
+    } catch (err: any) {
+      clearTimer();
+      setLoading(false);
+      console.error("Monnify init failed:", err);
+      alert("Payment initialization failed: " + (err?.message || String(err)));
+    }
+  };
 
   useEffect(() => {
-    return () => {
-      clearTimer();
-    };
+    return () => clearTimer();
   }, []);
 
   return (
@@ -228,8 +222,8 @@ export default function CheckoutClient() {
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
               <div className="flex flex-col">
-                <div className="mb-6  flex justify-center items-center">
-                 <Register />
+                <div className="mb-6 flex justify-center items-center">
+                  <Register />
                 </div>
               </div>
             </div>
@@ -238,28 +232,26 @@ export default function CheckoutClient() {
           {/* Order summary */}
           <aside className="bg-white rounded-2xl shadow-md p-6 sm:p-8 flex flex-col h-full lg:sticky lg:top-6">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Order summary</h3>
+
             {/* Plan */}
-            <div className="mb-4 ">
+            <div className="mb-4">
               <p className="text-md text-gray-500 mb-2">Plan</p>
-              <div>
-              <div className=" ">
               <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1">
                 <p className="text-sm text-gray-500">Billed {isQuarterly ? "quarterly" : interval}</p>
                 <div className="text-right">
                   <p className="text-lg font-semibold text-gray-900">{formatNaira(planPrice)}</p>
                   {isQuarterly && <p className="text-sm text-gray-400 ">* 3</p>}
                 </div>
-                </div>
-               {isQuarterly && (
-                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1">
+              </div>
+
+              {isQuarterly && (
+                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1 mt-1">
                   <p className="text-sm text-gray-500">Domain</p>
                   <div className="text-right">
                     <p className="text-sm text-gray-400 ">+ 7500</p>
                   </div>
                 </div>
-               )}
-              </div>
-              </div>
+              )}
             </div>
 
             {/* Domain */}
@@ -289,20 +281,6 @@ export default function CheckoutClient() {
                 </div>
               )}
             </div>
-
-            {/* Subtotal (quarterly) */}
-            {isQuarterly && (
-              <div className="flex flex-col gap-1 mb-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Subtotal </span>
-                  <span className="text-lg text-gray-900">{formatNaira(planPrice * 3 + (DOMAIN_COST))}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 ">Domain</span>
-                  <span className="text-gray-400 line-through">{formatNaira(DOMAIN_COST)}</span>
-                </div>
-              </div>
-            )}
 
             {/* Total */}
             <div className="flex items-center justify-between mb-4">
@@ -335,4 +313,3 @@ export default function CheckoutClient() {
     </div>
   );
 }
-
