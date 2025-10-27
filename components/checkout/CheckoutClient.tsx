@@ -24,7 +24,7 @@ export default function CheckoutClient() {
   const params = useSearchParams();
   const router = useRouter();
 
-  const { name, email, phone } = useRegisterStore();
+  const { name, email } = useRegisterStore();
   const { selectedPreview } = useTemplateStore();
   const { setChoice, setTotal, setDomainAdded, domainAdded } = useCheckoutStore();
   const { plans, interval } = usePricingStore();
@@ -54,7 +54,7 @@ export default function CheckoutClient() {
   const subtotal = isQuarterly ? planPrice * 3 : planPrice;
   const totalAmount = isQuarterly ? subtotal : subtotal + (domainAdded ? DOMAIN_COST : 0);
 
-  // Load Monnify SDK
+  // Load Monnify SDK safely
   useEffect(() => {
     const existing = document.querySelector('script[src="https://sdk.monnify.com/plugin/monnify.js"]');
     if (!existing) {
@@ -77,6 +77,7 @@ export default function CheckoutClient() {
     }
   }, []);
 
+  // Load default plans if none exist
   useEffect(() => {
     if (!plans || (Array.isArray(plans) && plans.length === 0)) {
       import("@/lib/defaultPlans")
@@ -110,16 +111,14 @@ export default function CheckoutClient() {
     }
   };
 
-  const sanitizeEnv = (v?: string) => {
-    if (!v) return "";
-    return v.replace(/^\s*"(.*)"\s*$/, "$1");
-  };
+  const sanitizeEnv = (v?: string) => (v ? v.replace(/^\s*"(.*)"\s*$/, "$1") : "");
 
+  // Handle payment
   const handlePay = () => {
     setErrorMessage(null);
 
-    if (!name || (!email && !phone)) {
-      setErrorMessage("Please fill in your name and either an email or phone number first!");
+    if (!name || !email) {
+      setErrorMessage("Please fill in your name and email address first!");
       return;
     }
 
@@ -133,14 +132,6 @@ export default function CheckoutClient() {
 
     setLoading(true);
     paymentCompletedRef.current = false;
-    clearTimer();
-
-    timerRef.current = setTimeout(() => {
-      if (!paymentCompletedRef.current) {
-        setLoading(false);
-        setErrorMessage("Payment is taking too long. Try again or pay to 9012065117 Opay.");
-      }
-    }, 8000);
 
     const storedTotal = snap.total;
     const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
@@ -171,7 +162,7 @@ export default function CheckoutClient() {
           planId: selectedPlan?.id,
           interval,
           domainAdded,
-          contact: email || phone || undefined,
+          contact: email,
         },
         onLoadStart: () => setLoading(true),
         onLoadComplete: () => {
@@ -211,6 +202,7 @@ export default function CheckoutClient() {
     <div className="h-screen bg-gray-50 pb-24 flex flex-col">
       <div className="flex-1 max-w-6xl mx-auto px-4 py-8 lg:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 h-full">
+          {/* Template + Register */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
               <div className="flex flex-col">
@@ -221,9 +213,11 @@ export default function CheckoutClient() {
             </div>
           </div>
 
+          {/* Order summary */}
           <aside className="bg-white rounded-2xl shadow-md p-6 sm:p-8 flex flex-col h-full lg:sticky lg:top-6">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Order summary</h3>
 
+            {/* Plan */}
             <div className="mb-4">
               <p className="text-md text-gray-500 mb-2">Plan</p>
               <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1">
@@ -244,6 +238,7 @@ export default function CheckoutClient() {
               )}
             </div>
 
+            {/* Domain */}
             <div className="mb-4">
               <p className="text-sm text-gray-500 mb-2">Custom domain</p>
               {isMonthly ? (
@@ -271,6 +266,7 @@ export default function CheckoutClient() {
               )}
             </div>
 
+            {/* Total */}
             <div className="flex items-center justify-between mb-4">
               <span className="text-gray-500 font-semibold">Total</span>
               <span className="text-xl sm:text-2xl font-bold text-gray-900">{formatNaira(totalAmount)}</span>
