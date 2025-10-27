@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Register from "@/components/form/detailsform";
 import { useRegisterStore } from "@/stores/registerStores";
@@ -45,6 +45,9 @@ export default function CheckoutClient() {
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
   const [scriptError, setScriptError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const router = useRouter();
 
   // Calculate total
   const subtotal = isQuarterly ? planPrice * 3 : planPrice;
@@ -98,99 +101,124 @@ export default function CheckoutClient() {
 
   const paymentCompletedRef = useRef(false);
 
+  const clearTimer = () => {
+    try {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current as any);
+        timerRef.current = null;
+      }
+    } catch (e) {}
+  };
+
   const sanitizeEnv = (v?: string) => {
     if (!v) return "";
     return v.replace(/^\s*"(.*)"\s*$/, "$1");
   };
 
-  const handlePay = () => {
-    if (!name || (!email && !phone)) {
-      alert("Please fill in your name and either an email or phone number first!");
-      return;
-    }
+ const handlePay = () => {
+  if (!name || (!email && !phone)) {
+    alert("Please fill in your name and either an email or phone number first!");
+    return;
+  }
 
-    if (!sdkReady || !window.MonnifySDK) {
-      const msg = scriptError
-        ? "Check your network or browser for errors."
-        : "Try again in a moment.";
-      alert(msg);
-      return;
-    }
+  // make sure SDK loaded properly
+  if (!sdkReady || typeof window.MonnifySDK !== "object") {
+    const msg = scriptError
+      ? "Monnify service not available. Check your internet connection or reload."
+      : "Payment system still loading. Please wait a few seconds and try again.";
+    alert(msg);
+    return;
+  }
 
-    setLoading(true);
+  setErrorMessage(null);
+  setLoading(true);
+  paymentCompletedRef.current = false;
+  clearTimer();
 
-    // use persisted total when available so refresh doesn't change the amount
-    const storedTotal = snap.total;
-    const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
-
-    const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
-    const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
-    const baseUrl = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_BASE_URL as any);
-
-    if (!apiKey || !contractCode) {
+  // shorter watchdog timer (8 seconds instead of 15)
+  timerRef.current = setTimeout(() => {
+    if (!paymentCompletedRef.current) {
       setLoading(false);
-      alert(
-      "service unavailable"
-      );
-      return;
+      setErrorMessage("Payment is taking too long. Try again or use manual checkout.");
     }
+  }, 8000);
 
-    try {
+  // use persisted total if available
+  const storedTotal = snap.total;
+  const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
+
+  // ensure environment variables are defined
+  const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
+  const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
+  const baseUrl = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_BASE_URL as any);
+
+  if (!apiKey || !contractCode) {
+    clearTimer();
+    setLoading(false);
+    alert("Payment service unavailable. Missing Monnify configuration.");
+    return;
+  }
+
+  try {
+    // fallback email if only phone provided
+    const fallbackEmail = email || `${phone}@placeholder.com`;
+
     window.MonnifySDK.initialize({
       amount: displayTotal,
-        currency: "NGN",
-    customerName: name,
-    customerFullName: name,
-    // Monnify prefers an email; pass email when available. If only phone is provided, leave undefined and include phone in metadata.
-    customerEmail: email || undefined,
-        apiKey,
-        contractCode,
-        baseUrl: baseUrl || undefined,
-        paymentDescription: `${selectedPlan?.name ?? "Plan"} - ${isQuarterly ? "Quarterly" : "Monthly"}`,
-        metadata: {
-          planId: selectedPlan?.id,
-          interval,
-          domainAdded,
-          contact: email || phone || undefined,
-        },
-        onLoadStart: () => {
-          setLoading(true);
-        },
-        onLoadComplete: () => {
-          setLoading(false);
-        },
-        onComplete: (res: any) => {
-          paymentCompletedRef.current = true;
-          try {
-            useRegisterStore.getState().clear?.();
-          } catch (e) {}
-          try {
-            useCheckoutStore.getState().clear?.();
-          } catch (e) {}
-          try {
-            useTemplateStore.getState().clear?.();
-          } catch (e) {}
-          try {
-            (usePricingStore as any).getState().clear?.();
-          } catch (e) {}
+      currency: "NGN",
+      customerName: name,
+      customerFullName: name,
+      customerEmail: fallbackEmail,
+      apiKey,
+      contractCode,
+      baseUrl: baseUrl || undefined,
+      paymentDescription: `${selectedPlan?.name ?? "Plan"} - ${isQuarterly ? "Quarterly" : "Monthly"}`,
+      metadata: {
+        planId: selectedPlan?.id,
+        interval,
+        domainAdded,
+        contact: email || phone || undefined,
+      },
+      onLoadStart: () => {
+        setLoading(true);
+      },
+      onLoadComplete: () => {
+        clearTimer();
+        setLoading(false);
+      },
+      onComplete: (res: any) => {
+        paymentCompletedRef.current = true;
+        try { useRegisterStore.getState().clear?.(); } catch {}
+        try { useCheckoutStore.getState().clear?.(); } catch {}
+        try { useTemplateStore.getState().clear?.(); } catch {}
+        try { (usePricingStore as any).getState().clear?.(); } catch {}
 
+        clearTimer();
+        setLoading(false);
+        router.push(`/`);
+      },
+      onClose: () => {
+        if (!paymentCompletedRef.current) {
+          clearTimer();
           setLoading(false);
-          window.location.href = `/`;
-        },
-        onClose: (res: any) => {
-          if (!paymentCompletedRef.current) {
-            setLoading(false);
-            window.location.href = "/checkout";
-          }
-        },
-      });
-    } catch (err: any) {
-      setLoading(false);
-      const message = err?.message || String(err);
-      console.error("Monnify initialization failed:", message);
-      alert("Payment initialization failed: " + message);
-    }
-  };
+          router.push("/checkout");
+        }
+      },
+    });
+  } catch (err: any) {
+    clearTimer();
+    setLoading(false);
+    console.error("Monnify init failed:", err);
+    alert("Payment initialization failed: " + (err?.message || String(err)));
+  }
+};
+
+
+  useEffect(() => {
+    return () => {
+      clearTimer();
+    };
+  }, []);
 
   return (
     <div className="h-screen bg-gray-50 pb-24 flex flex-col">
@@ -289,6 +317,16 @@ export default function CheckoutClient() {
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `Pay ${formatNaira(totalAmount)}`}
             </Button>
+
+            {errorMessage && (
+              <div className="mt-4 rounded-md p-3 bg-yellow-50 border border-yellow-200">
+                <p className="text-sm text-yellow-800">{errorMessage}</p>
+                <div className="mt-3 flex gap-2">
+                  <Button onClick={() => { setErrorMessage(null); handlePay(); }} className="px-3 py-1">Retry payment</Button>
+                  <Button onClick={() => router.push('/checkout')} className="px-3 py-1 bg-gray-200 text-gray-800">Continue to manual checkout</Button>
+                </div>
+              </div>
+            )}
 
             <p className="text-xs text-gray-400 text-center mt-3">Secure checkout • Instant activation</p>
           </aside>
