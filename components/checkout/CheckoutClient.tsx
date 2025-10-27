@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Register from "@/components/form/detailsform";
@@ -51,10 +51,14 @@ export default function CheckoutClient() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const paymentCompletedRef = useRef(false);
 
-  const subtotal = isQuarterly ? planPrice * 3 : planPrice;
-  const totalAmount = isQuarterly ? subtotal : subtotal + (domainAdded ? DOMAIN_COST : 0);
+  // 💰 Calculate subtotal + total reactively
+  const subtotal = useMemo(() => (isQuarterly ? planPrice * 3 : planPrice), [isQuarterly, planPrice]);
+  const totalAmount = useMemo(() => {
+    if (isQuarterly) return subtotal; // Domain is free on quarterly
+    return subtotal + (domainAdded ? DOMAIN_COST : 0);
+  }, [isQuarterly, subtotal, domainAdded]);
 
-  // Load Monnify SDK safely
+  // Load Monnify SDK
   useEffect(() => {
     const existing = document.querySelector('script[src="https://sdk.monnify.com/plugin/monnify.js"]');
     if (!existing) {
@@ -89,6 +93,7 @@ export default function CheckoutClient() {
     }
   }, [plans]);
 
+  // Persist state + update checkout values
   useEffect(() => {
     if (isQuarterly) setDomainAdded(true);
     if (isMonthly && snap.domainAdded !== undefined) setDomainAdded(snap.domainAdded);
@@ -98,11 +103,12 @@ export default function CheckoutClient() {
     if (template || plan) {
       setChoice(template || selectedPreview || "", plan || activePlanId, interval as "monthly" | "quarterly");
     }
+  }, [params, selectedPreview, activePlanId, interval, setChoice, setDomainAdded, snap.domainAdded]);
 
-    if (snap.total === null || snap.total === undefined) {
-      setTotal(totalAmount);
-    }
-  }, [params, selectedPreview, activePlanId, interval, setChoice, setTotal, setDomainAdded, snap.domainAdded]);
+  // Sync total to store anytime it changes
+  useEffect(() => {
+    setTotal(totalAmount);
+  }, [totalAmount, setTotal]);
 
   const clearTimer = () => {
     if (timerRef.current) {
@@ -133,8 +139,7 @@ export default function CheckoutClient() {
     setLoading(true);
     paymentCompletedRef.current = false;
 
-    const storedTotal = snap.total;
-    const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
+    const displayTotal = totalAmount;
 
     const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
     const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
@@ -266,10 +271,33 @@ export default function CheckoutClient() {
               )}
             </div>
 
+            {/* Show subtotal + line-through ONLY if quarterly */}
+            {isQuarterly && (
+              <>
+                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-1 mt-1">
+                  <p className="text-sm text-gray-500 font-medium">Subtotal</p>
+                  <div className="text-right">
+                    <p className="text-lg font-semibold text-gray-900">
+                      {formatNaira(planPrice * 3 + DOMAIN_COST)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center justify-between text-sm text-gray-600 ">
+                    <span>Domain</span>
+                    <span className="line-through">{formatNaira(DOMAIN_COST)}</span>
+                  </div>
+                </div>
+              </>
+            )}
+
             {/* Total */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 mt-2">
               <span className="text-gray-500 font-semibold">Total</span>
-              <span className="text-xl sm:text-2xl font-bold text-gray-900">{formatNaira(totalAmount)}</span>
+              <span className="text-xl sm:text-2xl font-bold text-gray-900">
+                {formatNaira(totalAmount)}
+              </span>
             </div>
 
             <Button
@@ -291,7 +319,9 @@ export default function CheckoutClient() {
               </div>
             )}
 
-            <p className="text-xs text-gray-400 text-center mt-3">Secure checkout • Instant activation</p>
+            <p className="text-xs text-gray-400 text-center mt-3">
+              Secure checkout • Instant activation
+            </p>
           </aside>
         </div>
       </div>
