@@ -4,18 +4,15 @@ import type { ReqBody } from '@/types/request';
 export async function POST(req: Request) {
   try {
     const body: ReqBody = await req.json();
-    const { name, email, phone, phoneNumber } = body as any;
+    const { name, email } = body as any;
 
-    // Accept either `phone` or `phoneNumber` or `email` — require at least one contact plus name
-    const contactPhone = phone || phoneNumber;
-    const contactEmail = email;
-
+    // Require name + email
     if (!name) {
       return NextResponse.json({ error: 'Missing name' }, { status: 400 });
     }
 
-    if (!contactEmail && !contactPhone) {
-      return NextResponse.json({ error: 'Missing contact (email or phone)' }, { status: 400 });
+    if (!email) {
+      return NextResponse.json({ error: 'Missing email' }, { status: 400 });
     }
     
 

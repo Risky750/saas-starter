@@ -24,7 +24,7 @@ export default function CheckoutClient() {
   const params = useSearchParams();
   const router = useRouter();
 
-  const { name, email, phone } = useRegisterStore();
+  const { name, email } = useRegisterStore();
   const { selectedPreview } = useTemplateStore();
   const { setChoice, setTotal, setDomainAdded, domainAdded } = useCheckoutStore();
   const { plans, interval } = usePricingStore();
@@ -132,10 +132,9 @@ export default function CheckoutClient() {
   // ✅ Handle payment
   const handlePay = () => {
     console.log("💳 Payment attempt started...");
-    console.log("User Info:", { name, email, phone });
 
-    if (!name || (!email && !phone)) {
-      alert("Please fill in your name and either an email or phone number first!");
+    if (!name || !email) {
+      alert("Please fill in your name and email address first!");
       console.warn("⚠️ Missing customer info");
       return;
     }
@@ -185,7 +184,7 @@ export default function CheckoutClient() {
         amount: displayTotal,
         currency: "NGN",
         customerName: name,
-        contact: email || phone,
+        email,
         plan: selectedPlan?.name,
         interval,
       });
@@ -204,7 +203,7 @@ export default function CheckoutClient() {
           planId: selectedPlan?.id,
           interval,
           domainAdded,
-          contact: email || phone || undefined,
+          contact: email,
         },
         onLoadStart: () => {
           console.log("🌀 Monnify modal loading...");

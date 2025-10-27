@@ -10,11 +10,10 @@ type RegisterStore = RegisterState & {
 export const useRegisterStore = create<RegisterStore>()(
   persist(
     (set) => ({
-      name: "",
-      email: "",
-      phone: "",
-      setField: (field, value) => set((state) => ({ ...state, [field]: value })),
-      clear: () => set({ name: "", email: "", phone: "" }),
+    name: "",
+    email: "",
+    setField: (field, value) => set((state) => ({ ...state, [field]: value })),
+    clear: () => set({ name: "", email: "" }),
     }),
     {
       name: "register-storage",
