@@ -151,16 +151,7 @@ export default function CheckoutClient() {
     setErrorMessage(null);
     setLoading(true);
     paymentCompletedRef.current = false;
-    clearTimer();
 
-    console.log("🕐 Starting 8s watchdog timer for payment...");
-    timerRef.current = setTimeout(() => {
-      if (!paymentCompletedRef.current) {
-        setLoading(false);
-        setErrorMessage("Payment is taking too long. Try again or pay to 9012065117 Opay.");
-        console.error("⏰ Payment timeout triggered");
-      }
-    }, 8000);
 
     const storedTotal = snap.total;
     const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
