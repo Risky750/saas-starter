@@ -151,9 +151,9 @@ export default function CheckoutClient() {
     const storedTotal = snap.total;
     const displayTotal = typeof storedTotal === "number" ? storedTotal : totalAmount;
 
-    const apiKey = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_API_KEY as any);
-    const contractCode = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE as any);
-    const baseUrl = sanitizeEnv(process.env.NEXT_PUBLIC_MONNIFY_BASE_URL as any);
+    const apiKey = sanitizeEnv(process.env.MONNIFY_API_KEY as any);
+    const contractCode = sanitizeEnv(process.env.MONNIFY_CONTRACT_CODE as any);
+    const baseUrl = sanitizeEnv(process.env.MONNIFY_BASE_URL as any);
 
     if (!apiKey || !contractCode) {
       clearTimer();
@@ -301,7 +301,6 @@ export default function CheckoutClient() {
                 <p className="text-sm text-yellow-800">{errorMessage}</p>
                 <div className="mt-3 flex gap-2">
                   <Button onClick={() => { setErrorMessage(null); handlePay(); }} className="px-3 py-1">Retry payment</Button>
-                  <Button onClick={() => router.push('/checkout')} className="px-3 py-1 bg-gray-200 text-gray-800">Continue to manual checkout</Button>
                 </div>
               </div>
             )}
